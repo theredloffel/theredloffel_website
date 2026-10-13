@@ -12,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "The Red Löffel | Le Bistro Artisanal Cloud Kitchen",
-  description: "Michelin-inspired artisanal cloud kitchen. Wood-fired sourdough, handmade fresh pasta, and gourmet delicacies delivered hot to your doorstep.",
-  keywords: ["cloud kitchen", "artisanal bistro", "wood-fired pizza", "fresh pasta", "gourmet delivery", "the red loeffel"],
+  title: "The Red Löffel | Cloud Kitchen",
+  description: "Gourmet cloud kitchen. Fresh burgers, rice bowls, loaded fries, and delicacies delivered hot to your doorstep.",
+  keywords: ["cloud kitchen", "burgers", "rice bowls", "gourmet delivery", "the red loeffel"],
 };
 
 export default function RootLayout({

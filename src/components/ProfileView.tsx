@@ -226,7 +226,7 @@ export function ProfileView() {
         </div>
 
         <p className="text-center text-xs text-[#A8A29E] py-4">
-          The Red Löffel • Artisanal Cloud Kitchen, Greater Noida
+          The Red Löffel • Cloud Kitchen, Greater Noida
         </p>
       </main>
     );
@@ -429,7 +429,7 @@ export function ProfileView() {
                     onClick={() => router.push("/")}
                     className="px-5 py-2.5 rounded-xl bg-[#C2410C] text-white text-xs font-bold hover:bg-[#9A3412] transition-colors"
                   >
-                    Browse Artisanal Menu
+                    Browse Menu
                   </button>
                 </div>
               ) : (
@@ -1069,7 +1069,7 @@ export function ProfileView() {
               </div>
               <h2 className="font-serif text-2xl font-bold text-[#1C1917]">The Red Löffel</h2>
               <p className="text-sm text-[#78716C] leading-relaxed">
-                The Red Löffel is an artisanal gourmet cloud kitchen located in Knowledge Park
+                The Red Löffel is a gourmet cloud kitchen located in Knowledge Park
                 III, Greater Noida. We handcraft gourmet burgers, rich bowls, loaded snacks, and
                 refreshing beverages using fresh ingredients and chef-curated recipes.
               </p>

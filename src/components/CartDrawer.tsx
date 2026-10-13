@@ -125,7 +125,7 @@ export function CartDrawer() {
                   Your cart is empty
                 </h3>
                 <p className="text-xs text-[#78716C] max-w-xs mx-auto">
-                  Explore our artisanal carte to add wood-fired delicacies, fresh pastas, and signature desserts.
+                  Explore our cloud kitchen menu to add fresh burgers, delicious bowls, and signature sides.
                 </p>
                 <button
                   onClick={() => setIsCartOpen(false)}

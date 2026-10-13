@@ -884,8 +884,8 @@ export function AuthModal() {
                   </div>
                   <h3 className="font-serif text-xl font-bold text-[#1C1917]">The Red Löffel</h3>
                   <p className="text-xs text-[#78716C] leading-relaxed">
-                    The Red Löffel is an artisanal gourmet cloud kitchen located in Knowledge Park
-                    III, Greater Noida. We handcraft artisanal burgers, rice bowls, loaded fries,
+                    The Red Löffel is a gourmet cloud kitchen located in Knowledge Park
+                    III, Greater Noida. We handcraft gourmet burgers, rice bowls, loaded fries,
                     and cold beverages prepared fresh with 100% premium ingredients.
                   </p>
                   <div className="pt-2 border-t border-[#E7E0D8] text-xs text-[#57534E] space-y-1.5 font-medium">

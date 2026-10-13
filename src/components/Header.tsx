@@ -12,7 +12,6 @@ import {
   User,
   UserCheck,
   History,
-  ShieldCheck,
   X,
   MapPin,
 } from "lucide-react";
@@ -68,7 +67,7 @@ export function Header() {
       {/* ========================================================= */}
       {/* DESKTOP HEADER (Fixed at top when scrolled) */}
       {/* ========================================================= */}
-      {isScrolled && <div className="hidden md:block h-[100px]" aria-hidden="true" />}
+      {isScrolled && <div className="hidden md:block h-[72px]" aria-hidden="true" />}
       <div
         className={`hidden md:block ${
           isScrolled
@@ -76,36 +75,6 @@ export function Header() {
             : "relative bg-[#FAF8F5] border-b border-[#E7E0D8] shadow-xs"
         } transition-all`}
       >
-        {/* Top micro-bar for operations & live status on desktop */}
-        <div className="bg-[#1C1917] text-[#FAF8F5] text-xs px-4 py-1 font-medium justify-between items-center">
-          <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span
-                className={`inline-block w-2 h-2 rounded-full ${
-                  isStoreOpen ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
-                }`}
-              ></span>
-              <span className="tracking-wide">
-                {isStoreOpen
-                  ? "Kitchen Open • Live Artisanal Orders Active"
-                  : "Kitchen Closed • Online Orders Currently Paused"}
-              </span>
-            </div>
-            <div className="flex items-center gap-4 text-[#D7CCC8]">
-              <span className="flex items-center gap-1.5 text-[11px]">
-                <Clock className="w-3.5 h-3.5 text-[#C2410C]" /> 30-45 mins average delivery
-              </span>
-              <span>•</span>
-              <Link
-                href="/admin"
-                className="text-[#FED7AA] hover:text-white underline underline-offset-4 flex items-center gap-1 font-semibold text-[11px]"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-[#C2410C]" /> Operations Dashboard (/admin)
-              </Link>
-            </div>
-          </div>
-        </div>
-
         {/* Desktop Main Unified Row */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3">
           <div className="flex items-center justify-between gap-4 lg:gap-6">
@@ -119,12 +88,9 @@ export function Header() {
                   <span className="font-serif text-xl lg:text-2xl font-bold tracking-tight text-[#1C1917] leading-none">
                     The Red Löffel
                   </span>
-                  <span className="text-[9px] uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#FED7AA] text-[#9A3412] font-semibold">
-                    Le Bistro
-                  </span>
                 </div>
                 <p className="text-[10px] text-[#78716C] tracking-wider uppercase font-medium mt-0.5">
-                  Artisanal Cloud Kitchen
+                  Cloud Kitchen
                 </p>
               </div>
             </Link>
@@ -260,7 +226,7 @@ export function Header() {
             <Link
               href="/"
               className="shrink-0 flex items-center justify-center w-12 h-12 rounded-2xl bg-[#C2410C] text-white shadow-md shadow-[#C2410C]/25 active:scale-95 transition-transform"
-              title="The Red Löffel - Artisanal Cloud Kitchen"
+              title="The Red Löffel - Cloud Kitchen"
             >
               <div className="flex flex-col items-center justify-center text-center">
                 <UtensilsCrossed className="w-5 h-5 text-[#FAF8F5]" />

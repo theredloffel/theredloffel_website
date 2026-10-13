@@ -54,8 +54,8 @@ export function Storefront() {
                 The Red Löffel
               </span>
               <p className="text-xs text-[#A8A29E] leading-relaxed">
-                Artisanal cloud kitchen operating in Indiranagar, Bengaluru. Dedicated to
-                authentic French-Italian bistro heritage, wood-fired cooking, and zero-compromise packaging.
+                Cloud kitchen operating in Knowledge Park III, Greater Noida. Dedicated to
+                fresh gourmet burgers, bowls, sides, and zero-compromise packaging.
               </p>
               <div className="text-[11px] text-[#78716C]">
                 FSSAI Lic. No: 11224334001928 • Compliant Gourmet Facility
@@ -68,26 +68,26 @@ export function Storefront() {
                 Kitchen Service
               </h4>
               <ul className="text-xs text-[#A8A29E] space-y-2">
-                <li>Artisanal Gourmet Delicacies</li>
+                <li>Fresh Gourmet Delicacies</li>
                 <li>Wood-Fired Oven & Fresh Burgers</li>
                 <li>Zero-Compromise Thermal Packaging</li>
-                <li className="text-emerald-400 font-semibold">• Live Artisanal Orders Active</li>
+                <li className="text-emerald-400 font-semibold">• Live Orders Active</li>
               </ul>
             </div>
 
             {/* Col 3: Kitchen Location */}
             <div className="space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-[#FED7AA]">
-                Artisan Hub
+                Kitchen Location
               </h4>
               <div className="text-xs text-[#A8A29E] space-y-2">
                 <p className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-[#C2410C] shrink-0 mt-0.5" />
-                  <span>Suite 402, Artisan Lane, 100ft Road, Indiranagar, Bengaluru - 560038</span>
+                  <span>Knowledge Park III, Near Sharda University, Greater Noida - 201310</span>
                 </p>
                 <p className="flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>WhatsApp Concierge: +91 98765 43210</span>
+                  <span>WhatsApp Concierge: +91 62976 73521</span>
                 </p>
               </div>
             </div>

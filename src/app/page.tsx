@@ -13,7 +13,7 @@ const Storefront = dynamic(
             <span className="font-serif font-bold text-xl text-white">RL</span>
           </div>
           <p className="font-serif text-sm font-semibold text-[#1C1917]">
-            The Red Löffel • Le Bistro
+            The Red Löffel • Cloud Kitchen
           </p>
         </div>
       </div>

@@ -1,6 +1,6 @@
-# The Red Löffel (Le Bistro) - Artisanal Cloud Kitchen
+# The Red Löffel - Cloud Kitchen
 
-A luxury, responsive frontend web application built for an artisanal cloud kitchen adhering strictly to the **"Le Bistro"** culinary design aesthetic:
+A luxury, responsive web application built for **The Red Löffel** gourmet cloud kitchen:
 - **Warm Cream Canvas:** `#FAF8F5`
 - **Deep Espresso / Charcoal Typography:** `#1C1917`
 - **Terracotta & Amber Accents:** `#C2410C` & `#D97706`
@@ -20,9 +20,8 @@ A luxury, responsive frontend web application built for an artisanal cloud kitch
 ## 🚀 Key Views & Features
 
 ### 1. View 1: Customer Storefront & Portal (`/`)
-- **Header & Top Bar:**
-  - Brand identity ("The Red Löffel" & subtitle "Artisanal Cloud Kitchen").
-  - Live kitchen status: *"Kitchen Open • 30-45 mins delivery"* with pulsing indicator.
+- **Header & Navigation:**
+  - Brand identity ("The Red Löffel" & subtitle "Cloud Kitchen").
   - Quick action buttons for **Order History**, **Login / Account**, and sticky **Cart** badge.
 - **Authentication (Phone OTP Modal):**
   - Indian Mobile Number format (`+91`) input with validation.
@@ -45,7 +44,7 @@ A luxury, responsive frontend web application built for an artisanal cloud kitch
     - **Bowls:** Kadhi Chawal (₹100), Rajma Chawal (₹100), Chole Chawal (₹100).
     - **Hotline & Brand:** +91 95400 60366 • "Good Food. Great Mood."
 - **Menu & Categories:**
-  - Sticky horizontal category pill bar (*All*, *Bistro Starters*, *Wood-fired Mains*, *Artisan Pasta*, *Beverages & Desserts*).
+  - Sticky horizontal category pill bar (*All*, *Burgers*, *Fried Rice*, *Pasta*, *Beverages & Desserts*).
   - Veg / Non-Veg filter toggle with authentic Indian dietary markers (green dot vs red triangle).
   - Search filtering by dish title, ingredients, or description.
   - Interactive item cards with high-res food photography, tags (*Chef's Signature*, *Bestseller*), out-of-stock overlay, and smooth `[-] Qty [+]` counters.

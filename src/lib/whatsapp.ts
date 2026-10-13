@@ -255,7 +255,7 @@ export async function sendWhatsAppStatusUpdate(
   let messageBody = "";
 
   if (status === "PREPARING") {
-    messageBody = `🔥 *Kitchen Update — Order #${orderId}*\n\nYour gourmet dishes are currently sizzling on the fire and being artisanal plated. Fresh ingredients only!`;
+    messageBody = `🔥 *Kitchen Update — Order #${orderId}*\n\nYour gourmet dishes are currently sizzling on the fire and being freshly prepared in our cloud kitchen. Fresh ingredients only!`;
   } else if (status === "OUT_FOR_DELIVERY") {
     const riderInfo = riderName
       ? `\n🚴 Rider: *${riderName}*${riderPhone ? ` (${riderPhone})` : ""}`
