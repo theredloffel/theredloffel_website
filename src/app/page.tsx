@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 
 const Storefront = dynamic(
   () => import("@/components/Storefront").then((mod) => mod.Storefront),
@@ -9,8 +10,15 @@ const Storefront = dynamic(
     loading: () => (
       <div className="min-h-screen flex flex-col bg-[#FAF8F5] text-[#1C1917] items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-[#C2410C] flex items-center justify-center text-white shadow-md animate-pulse">
-            <span className="font-serif font-bold text-xl text-white">RL</span>
+          <div className="w-16 h-16 rounded-full overflow-hidden shadow-md border border-[#E7E0D8] animate-pulse bg-white">
+            <Image
+              src="/logo.jpeg"
+              alt="The Red Löffel"
+              width={64}
+              height={64}
+              priority
+              className="w-full h-full object-cover"
+            />
           </div>
           <p className="font-serif text-sm font-semibold text-[#1C1917]">
             The Red Löffel • Cloud Kitchen

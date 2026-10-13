@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { useKitchen } from "@/context/KitchenContext";
 import {
   X,
@@ -879,8 +880,14 @@ export function AuthModal() {
                   <h3 className="font-bold text-lg text-[#1C1917]">About us</h3>
                 </div>
                 <div className="bg-white rounded-2xl border border-[#E7E0D8] p-5 space-y-3.5 shadow-2xs">
-                  <div className="w-12 h-12 rounded-2xl bg-[#C2410C] text-white flex items-center justify-center font-serif font-black text-xl shadow-md shadow-[#C2410C]/25">
-                    TL
+                  <div className="w-14 h-14 rounded-full overflow-hidden border border-[#E7E0D8] shadow-md bg-[#FAF8F5]">
+                    <Image
+                      src="/logo.jpeg"
+                      alt="The Red Löffel"
+                      width={56}
+                      height={56}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <h3 className="font-serif text-xl font-bold text-[#1C1917]">The Red Löffel</h3>
                   <p className="text-xs text-[#78716C] leading-relaxed">
@@ -997,6 +1004,17 @@ export function AuthModal() {
 
             {/* Header Titles */}
             <div className="mb-5 text-center sm:text-left">
+              <div className="mb-3 flex justify-center sm:justify-start">
+                <div className="w-12 h-12 rounded-full overflow-hidden border border-[#E7E0D8] shadow-xs bg-[#FAF8F5]">
+                  <Image
+                    src="/logo.jpeg"
+                    alt="The Red Löffel"
+                    width={48}
+                    height={48}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#1C1917]">
                 {step === "phone" && (cart.length > 0 ? "Login to Checkout" : "Sign In with Mobile")}
                 {step === "otp" && (isExistingUser ? "Verify OTP Code" : "Step 2 of 3 • Verify OTP")}

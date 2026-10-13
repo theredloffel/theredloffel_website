@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useKitchen } from "@/context/KitchenContext";
 import {
@@ -204,8 +205,15 @@ export function ProfileView() {
           </div>
 
           <div className="mt-8 bg-white rounded-3xl border border-[#E7E0D8] p-6 shadow-sm">
-            <div className="w-16 h-16 rounded-3xl bg-[#FED7AA]/60 text-[#C2410C] flex items-center justify-center mx-auto mb-4">
-              <User className="w-8 h-8" />
+            <div className="w-20 h-20 rounded-full overflow-hidden border border-[#E7E0D8] shadow-sm bg-[#FAF8F5] mx-auto mb-4">
+              <Image
+                src="/logo.jpeg"
+                alt="The Red Löffel"
+                width={80}
+                height={80}
+                priority
+                className="w-full h-full object-cover"
+              />
             </div>
             <h2 className="font-serif text-2xl font-bold text-[#1C1917] text-center">
               Sign In to Your Account
@@ -1064,8 +1072,14 @@ export function ProfileView() {
             </div>
 
             <div className="bg-white rounded-3xl border border-[#E7E0D8] p-6 space-y-4 shadow-2xs">
-              <div className="w-14 h-14 rounded-2xl bg-[#C2410C] text-white flex items-center justify-center font-serif font-black text-2xl shadow-md shadow-[#C2410C]/25">
-                TL
+              <div className="w-16 h-16 rounded-full overflow-hidden border border-[#E7E0D8] shadow-md bg-[#FAF8F5]">
+                <Image
+                  src="/logo.jpeg"
+                  alt="The Red Löffel"
+                  width={64}
+                  height={64}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <h2 className="font-serif text-2xl font-bold text-[#1C1917]">The Red Löffel</h2>
               <p className="text-sm text-[#78716C] leading-relaxed">

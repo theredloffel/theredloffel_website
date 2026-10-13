@@ -15,6 +15,11 @@ export const metadata: Metadata = {
   title: "The Red Löffel | Cloud Kitchen",
   description: "Gourmet cloud kitchen. Fresh burgers, rice bowls, loaded fries, and delicacies delivered hot to your doorstep.",
   keywords: ["cloud kitchen", "burgers", "rice bowls", "gourmet delivery", "the red loeffel"],
+  icons: {
+    icon: "/logo.jpeg",
+    shortcut: "/logo.jpeg",
+    apple: "/logo.jpeg",
+  },
 };
 
 export default function RootLayout({

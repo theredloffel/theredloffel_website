@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Header } from "@/components/Header";
 import { CategoryCarousel } from "@/components/CategoryCarousel";
 import { MenuSection } from "@/components/MenuSection";
@@ -50,9 +51,20 @@ export function Storefront() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
             {/* Col 1: Brand */}
             <div className="space-y-4">
-              <span className="font-serif text-2xl font-bold tracking-tight">
-                The Red Löffel
-              </span>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20 shadow-xs bg-[#FAF8F5] shrink-0">
+                  <Image
+                    src="/logo.jpeg"
+                    alt="The Red Löffel"
+                    width={40}
+                    height={40}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <span className="font-serif text-2xl font-bold tracking-tight">
+                  The Red Löffel
+                </span>
+              </div>
               <p className="text-xs text-[#A8A29E] leading-relaxed">
                 Cloud kitchen operating in Knowledge Park III, Greater Noida. Dedicated to
                 fresh gourmet burgers, bowls, sides, and zero-compromise packaging.

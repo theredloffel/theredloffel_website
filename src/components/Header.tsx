@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useKitchen } from "@/context/KitchenContext";
 import {
-  UtensilsCrossed,
   Clock,
   ChevronDown,
   Search,
@@ -80,8 +80,15 @@ export function Header() {
           <div className="flex items-center justify-between gap-4 lg:gap-6">
             {/* 1. LOGO AND NAME */}
             <Link href="/" className="flex items-center gap-3 shrink-0 group">
-              <div className="w-10 h-10 rounded-2xl bg-[#C2410C] flex items-center justify-center text-white shadow-md shadow-[#C2410C]/20 transition-transform group-hover:scale-105 duration-300">
-                <UtensilsCrossed className="w-5 h-5 text-[#FAF8F5]" />
+              <div className="relative w-11 h-11 rounded-full overflow-hidden border border-[#E7E0D8] shadow-xs group-hover:scale-105 transition-transform duration-300 bg-[#FAF8F5] shrink-0">
+                <Image
+                  src="/logo.jpeg"
+                  alt="The Red Löffel"
+                  width={44}
+                  height={44}
+                  priority
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -225,15 +232,17 @@ export function Header() {
             {/* 1. LOGO BADGE */}
             <Link
               href="/"
-              className="shrink-0 flex items-center justify-center w-12 h-12 rounded-2xl bg-[#C2410C] text-white shadow-md shadow-[#C2410C]/25 active:scale-95 transition-transform"
+              className="shrink-0 flex items-center justify-center w-11 h-11 rounded-full overflow-hidden border border-[#E7E0D8] shadow-xs active:scale-95 transition-transform bg-[#FAF8F5]"
               title="The Red Löffel - Cloud Kitchen"
             >
-              <div className="flex flex-col items-center justify-center text-center">
-                <UtensilsCrossed className="w-5 h-5 text-[#FAF8F5]" />
-                <span className="text-[8px] font-serif font-black tracking-tighter uppercase leading-none mt-0.5">
-                  LÖFFEL
-                </span>
-              </div>
+              <Image
+                src="/logo.jpeg"
+                alt="The Red Löffel"
+                width={44}
+                height={44}
+                priority
+                className="w-full h-full object-cover"
+              />
             </Link>
 
             {/* 2. LOCATION & STATUS */}

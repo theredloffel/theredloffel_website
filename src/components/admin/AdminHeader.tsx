@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowLeft, Search, X, Settings, LogOut, Bike } from "lucide-react";
 import { useKitchen } from "@/context/KitchenContext";
 import { OutForDeliveryModal } from "@/components/admin/OutForDeliveryModal";
@@ -60,8 +61,14 @@ export function AdminHeader({ onLogout, onOpenSettings, activeTab }: AdminHeader
 
           {/* 2. LOGO */}
           <div className="flex items-center gap-2.5 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-[#C2410C] flex items-center justify-center text-white shadow-xs font-serif font-black text-sm shrink-0">
-              RL
+            <div className="w-10 h-10 rounded-full overflow-hidden border border-white/20 shadow-xs bg-[#FAF8F5] shrink-0">
+              <Image
+                src="/logo.jpeg"
+                alt="The Red Löffel"
+                width={40}
+                height={40}
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
               <span className="font-serif text-base font-bold tracking-tight block leading-tight text-white">
@@ -181,9 +188,15 @@ export function AdminHeader({ onLogout, onOpenSettings, activeTab }: AdminHeader
                 <ArrowLeft className="w-4 h-4" />
               </Link>
 
-              <div className="flex items-center gap-1.5">
-                <div className="w-8 h-8 rounded-xl bg-[#C2410C] flex items-center justify-center text-white shadow-xs font-serif font-black text-xs shrink-0">
-                  RL
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full overflow-hidden border border-white/20 shadow-xs bg-[#FAF8F5] shrink-0">
+                  <Image
+                    src="/logo.jpeg"
+                    alt="The Red Löffel"
+                    width={32}
+                    height={32}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <span className="font-serif text-sm font-bold tracking-tight text-white hidden min-[400px]:inline">
                   Red Löffel

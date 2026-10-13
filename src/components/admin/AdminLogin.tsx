@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ShieldCheck, Lock, Eye, EyeOff, ArrowRight, ArrowLeft, KeyRound, AlertCircle, CheckCircle2 } from "lucide-react";
 
 interface AdminLoginProps {
@@ -67,8 +68,15 @@ export function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
         <div className="w-full max-w-md bg-[#1C1917] border border-[#292524] rounded-3xl p-8 sm:p-10 shadow-2xl space-y-6">
           {/* Header Icon & Title */}
           <div className="flex flex-col items-center text-center space-y-3">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#C2410C] to-[#EA580C] text-white flex items-center justify-center shadow-lg shadow-[#C2410C]/25">
-              <ShieldCheck className="w-8 h-8 text-white" />
+            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/20 shadow-xl shadow-black/40 bg-[#FAF8F5]">
+              <Image
+                src="/logo.jpeg"
+                alt="The Red Löffel"
+                width={80}
+                height={80}
+                priority
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
               <h1 className="font-serif text-2xl font-bold tracking-tight text-white">
