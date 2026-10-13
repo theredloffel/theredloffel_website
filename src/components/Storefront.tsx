@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   MapPin,
   Phone,
+  Bike,
 } from "lucide-react";
 
 export function Storefront() {
@@ -112,13 +113,22 @@ export function Storefront() {
               <p className="text-xs text-[#A8A29E]">
                 Kitchen managers and riders can access real-time dispatch, order status advancement, and menu stock controls.
               </p>
-              <Link
-                href="/admin"
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#C2410C] text-white text-xs font-semibold hover:bg-[#9A3412] transition-colors"
-              >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Launch Admin Dashboard</span>
-              </Link>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#C2410C] text-white text-xs font-semibold hover:bg-[#9A3412] transition-colors"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Admin Dashboard</span>
+                </Link>
+                <Link
+                  href="/driver"
+                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-semibold hover:bg-white/20 transition-colors"
+                >
+                  <Bike className="w-4 h-4" />
+                  <span>Driver Hub</span>
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -127,7 +137,9 @@ export function Storefront() {
             <div className="flex gap-6">
               <span>Privacy Policy</span>
               <span>Terms of Service</span>
-              <span>Rider Portal</span>
+              <Link href="/driver" className="hover:text-white transition-colors">
+                Driver Portal
+              </Link>
             </div>
           </div>
         </div>

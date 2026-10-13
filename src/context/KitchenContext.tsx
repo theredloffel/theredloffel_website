@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from "
 import { MenuItem, CartItem, Order, OrderStatus, Rider, UserProfile, OrderAddress, WhatsAppStatus, Category, SavedLocation, Coupon } from "@/types";
 import { INITIAL_MENU_ITEMS, INITIAL_ORDERS, RIDERS, INITIAL_COUPONS, DEFAULT_DELIVERY_CHARGE } from "@/data/mockData";
 import { orderService, menuService, couponService, settingsService } from "@backend";
+import { sendBrowserNotification } from "@/lib/pushNotifications";
 
 export interface ToastMessage {
   id: string;
@@ -807,6 +808,9 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       const cleanPhone = ((targetOrder as Order).customerPhone || "").replace(/\D/g, "");
       if (cleanPhone) {
         if (newStatus === "Order Accepted" || newStatus === "Preparing") {
+          sendBrowserNotification(`🍳 Order #${(targetOrder as Order).id} Confirmed!`, {
+            body: "Your order is confirmed and hot dishes are being prepared in the kitchen.",
+          });
           fetch("/api/notifications/send", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -817,6 +821,9 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
             }),
           }).catch((e) => console.error("Notification alert for confirmed order failed:", e));
         } else if (newStatus === "Rejected") {
+          sendBrowserNotification(`❌ Order #${(targetOrder as Order).id} Rejected`, {
+            body: `Order rejected due to: ${rejectionReason || "out of stock"}`,
+          });
           fetch("/api/notifications/send", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -900,6 +907,9 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     // 1. Notify Customer: "Your order is out for delivery - Order ID: #[id] - Amount: ₹[amount]"
     const cleanCustomerPhone = (order.customerPhone || "").replace(/\D/g, "");
     if (cleanCustomerPhone) {
+      sendBrowserNotification(`🛵 Order #${order.id} Out for Delivery!`, {
+        body: `Your food is on the way with driver ${riderName}. Amount: ₹${order.total}`,
+      });
       fetch("/api/notifications/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -917,6 +927,9 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     // 2. Notify Driver: "Pending delivery - Location: [location] - Order No: #[id] - Name: [name] - Amount: ₹[amount]"
     const cleanRiderPhone = (rider?.phone || "").replace(/\D/g, "");
     if (cleanRiderPhone) {
+      sendBrowserNotification(`📋 Delivery Task for ${riderName}!`, {
+        body: `Order #${order.id} at ${deliveryAddress} - Collect COD: ₹${order.total}`,
+      });
       fetch("/api/notifications/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
