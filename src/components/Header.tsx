@@ -76,8 +76,8 @@ export function Header() {
         } transition-all`}
       >
         {/* Desktop Main Unified Row */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3">
-          <div className="flex items-center justify-between gap-4 lg:gap-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px]">
+          <div className="flex items-center justify-between gap-4 lg:gap-6 h-full">
             {/* 1. LOGO AND NAME */}
             <Link href="/" className="flex items-center gap-3 shrink-0 group">
               <div className="relative w-11 h-11 rounded-full overflow-hidden border border-[#E7E0D8] shadow-xs group-hover:scale-105 transition-transform duration-300 bg-[#FAF8F5] shrink-0">

@@ -181,7 +181,7 @@ export function MenuSection() {
     const handleScroll = () => {
       if (!pillBarAnchorRef.current) return;
       const rect = pillBarAnchorRef.current.getBoundingClientRect();
-      const searchHeight = window.innerWidth >= 768 ? 96 : 52;
+      const searchHeight = window.innerWidth >= 768 ? 72 : 52;
       // Fixed when the category bar anchor meets or scrolls past the bottom of the fixed search bar
       setIsPillsFixed(rect.top <= searchHeight);
     };
@@ -202,7 +202,7 @@ export function MenuSection() {
     const handleScrollSpy = () => {
       if (isClickScrollingRef.current) return;
 
-      const headerOffset = window.innerWidth >= 768 ? 160 : 115;
+      const headerOffset = window.innerWidth >= 768 ? 130 : 110;
 
       for (let i = ALL_SECTION_CATEGORIES.length - 1; i >= 0; i--) {
         const catName = ALL_SECTION_CATEGORIES[i];
@@ -227,12 +227,12 @@ export function MenuSection() {
     setSelectedCategory(category);
 
     const isDesktop = window.innerWidth >= 768;
-    const headerOffset = isDesktop ? 160 : 115;
+    const headerOffset = isDesktop ? 130 : 110;
 
     if (category === "Under ₹99" || category === "All") {
       const menuElem = document.getElementById("menu");
       if (menuElem) {
-        const y = menuElem.getBoundingClientRect().top + window.pageYOffset - (isDesktop ? 150 : 105);
+        const y = menuElem.getBoundingClientRect().top + window.pageYOffset - (isDesktop ? 120 : 100);
         window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
       }
       setTimeout(() => {
@@ -285,7 +285,7 @@ export function MenuSection() {
       <div
         className={`${
           isPillsFixed
-            ? "fixed top-[52px] md:top-[96px] left-0 right-0 z-40 bg-[#FAF8F5]/98 backdrop-blur-md border-b border-[#E7E0D8] px-3.5 sm:px-6 lg:px-8 py-2.5 shadow-xs transition-all"
+            ? "fixed top-[52px] md:top-[72px] left-0 right-0 z-40 bg-[#FAF8F5]/98 backdrop-blur-md border-b border-[#E7E0D8] px-3.5 sm:px-6 lg:px-8 py-2.5 shadow-xs transition-all"
             : "relative py-3 bg-[#FAF8F5] border-b border-[#E7E0D8] mb-6 -mx-3.5 sm:mx-0 px-3.5 sm:px-0"
         }`}
       >
