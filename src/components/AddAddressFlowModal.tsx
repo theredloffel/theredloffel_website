@@ -139,7 +139,7 @@ export function AddAddressFlowModal({ isOpen, onClose, onSuccess }: AddAddressFl
                 Add Delivery Address
               </h3>
               <p className="text-[11px] text-[#78716C]">
-                Saved addresses allow 1-click turn-by-turn navigation for drivers
+                Saved addresses allow 1-click delivery to your doorstep
               </p>
             </div>
           </div>
@@ -268,7 +268,7 @@ export function AddAddressFlowModal({ isOpen, onClose, onSuccess }: AddAddressFl
           {/* Exact Address Preview Card with "Open in Google Maps" */}
           <div className="space-y-1.5 pt-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[#78716C] block">
-              Driver Navigation Preview
+              Delivery Location Preview
             </span>
             <div className="p-3.5 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] space-y-2.5">
               <div className="text-[11px] text-[#78716C] space-y-0.5">

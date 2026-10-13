@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useKitchen } from "@/context/KitchenContext";
 import { Order } from "@/types";
 import { OrderActionConfirmModal } from "@/components/admin/OrderActionConfirmModal";
+import { AddDriverModal } from "@/components/admin/AddDriverModal";
 import {
   X,
   Bike,
@@ -13,16 +14,29 @@ import {
   Clock,
   ShoppingBag,
   ExternalLink,
+  Plus,
+  Trash2,
+  Star,
+  UserCheck,
 } from "lucide-react";
 
 interface OutForDeliveryModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: "orders" | "fleet";
 }
 
-export function OutForDeliveryModal({ isOpen, onClose }: OutForDeliveryModalProps) {
-  const { orders, updateOrderStatus, riders, showToast } = useKitchen();
+export function OutForDeliveryModal({ isOpen, onClose, initialTab = "orders" }: OutForDeliveryModalProps) {
+  const { orders, updateOrderStatus, riders, removeRider, showToast } = useKitchen();
+  const [activeTab, setActiveTab] = useState<"orders" | "fleet">(initialTab);
   const [confirmingOrder, setConfirmingOrder] = useState<Order | null>(null);
+  const [isAddDriverOpen, setIsAddDriverOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
 
   if (!isOpen) return null;
 
@@ -40,6 +54,7 @@ export function OutForDeliveryModal({ isOpen, onClose }: OutForDeliveryModalProp
   };
 
   return (
+    <>
     <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
       {/* Backdrop */}
       <div
@@ -59,14 +74,16 @@ export function OutForDeliveryModal({ isOpen, onClose }: OutForDeliveryModalProp
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="font-serif text-lg sm:text-xl font-bold text-white">
-                  Out for Delivery Orders
+                  {activeTab === "orders" ? "Out for Delivery Orders" : "Registered Delivery Fleet"}
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full bg-[#FED7AA] text-[#9A3412] text-xs font-black">
-                  {activeDeliveryOrders.length} Active
+                  {activeTab === "orders" ? `${activeDeliveryOrders.length} Active` : `${riders.length} Drivers`}
                 </span>
               </div>
               <p className="text-xs text-[#A8A29E] mt-0.5">
-                Orders currently dispatched with delivery riders. Click Complete to mark delivered.
+                {activeTab === "orders"
+                  ? "Orders currently dispatched on the road with delivery riders."
+                  : "Active delivery partner drivers registered for dispatch."}
               </p>
             </div>
           </div>
@@ -81,9 +98,124 @@ export function OutForDeliveryModal({ isOpen, onClose }: OutForDeliveryModalProp
           </button>
         </div>
 
+        {/* Tab Selector Bar */}
+        <div className="flex border-b border-[#292524] bg-black/20 px-4 py-2 gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setActiveTab("orders")}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === "orders"
+                ? "bg-[#C2410C] text-white shadow-xs"
+                : "bg-white/5 text-[#A8A29E] hover:text-white"
+            }`}
+          >
+            <Bike className="w-4 h-4" />
+            <span>On Road Orders ({activeDeliveryOrders.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("fleet")}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              activeTab === "fleet"
+                ? "bg-[#C2410C] text-white shadow-xs"
+                : "bg-white/5 text-[#A8A29E] hover:text-white"
+            }`}
+          >
+            <UserCheck className="w-4 h-4" />
+            <span>Driver Fleet ({riders.length})</span>
+          </button>
+        </div>
+
         {/* Content Body */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-          {activeDeliveryOrders.length === 0 ? (
+          {activeTab === "fleet" ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-white">Registered Drivers ({riders.length})</h3>
+                  <p className="text-xs text-[#A8A29E]">Drivers eligible for dispatch assignments</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddDriverOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-[#C2410C] hover:bg-[#9A3412] text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-[#C2410C]/25 transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Driver</span>
+                </button>
+              </div>
+
+              {riders.length === 0 ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center space-y-3 bg-[#292524]/40 rounded-2xl border border-[#44403C]">
+                  <Bike className="w-8 h-8 text-[#A8A29E]" />
+                  <p className="text-xs text-[#A8A29E]">No drivers currently registered in the fleet.</p>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddDriverOpen(true)}
+                    className="px-3.5 py-2 rounded-xl bg-[#C2410C] text-white text-xs font-bold cursor-pointer"
+                  >
+                    + Register Driver via OTP
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {riders.map((r) => (
+                    <div
+                      key={r.id}
+                      className="bg-[#292524]/80 border border-[#44403C] rounded-2xl p-4 flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-[#FED7AA] border border-orange-500/40 flex items-center justify-center shrink-0">
+                          <Bike className="w-5 h-5 text-[#FED7AA]" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white text-sm truncate">{r.name}</span>
+                            <span className="flex items-center text-[10px] text-amber-400 font-bold">
+                              <Star className="w-3 h-3 fill-amber-400 mr-0.5" />
+                              {r.rating || 5.0}
+                            </span>
+                          </div>
+                          <p className="text-xs text-[#A8A29E] font-mono mt-0.5">+91 {r.phone}</p>
+                          <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 ${
+                            r.activeOrders > 0
+                              ? "bg-orange-500/20 text-orange-300 border border-orange-500/30"
+                              : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                          }`}>
+                            {r.activeOrders > 0 ? `On Road (${r.activeOrders} orders)` : "Available for Orders"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href={`tel:${r.phone.replace(/\D/g, "")}`}
+                          className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[#FED7AA] text-xs font-bold flex items-center gap-1.5 transition-colors"
+                          title="Call Driver"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                          <span>Call</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Remove ${r.name} from fleet?`)) {
+                              removeRider(r.id);
+                            }
+                          }}
+                          className="p-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 transition-colors cursor-pointer"
+                          title="Remove Driver"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : activeDeliveryOrders.length === 0 ? (
             <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
               <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center text-[#78716C]">
                 <Bike className="w-8 h-8 text-[#A8A29E]" />
@@ -226,6 +358,13 @@ export function OutForDeliveryModal({ isOpen, onClose }: OutForDeliveryModalProp
         onConfirm={handleExecuteDelivery}
         onCancel={() => setConfirmingOrder(null)}
       />
+
+      {/* Add Driver Phone Auth Modal */}
+      <AddDriverModal
+        isOpen={isAddDriverOpen}
+        onClose={() => setIsAddDriverOpen(false)}
+      />
     </div>
+    </>
   );
 }

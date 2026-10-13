@@ -10,7 +10,6 @@ import {
   ArrowRight,
   Utensils,
   MapPin,
-  Bike,
   ShoppingBag,
   Sparkles,
   User,
@@ -147,7 +146,7 @@ export function CartDrawer() {
                 {/* Free Doorstep Delivery Banner */}
                 <div className="bg-white p-3 rounded-2xl border border-[#E7E0D8] flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2 text-[#1C1917] font-semibold">
-                    <Bike className="w-4 h-4 text-[#C2410C]" />
+                    <ShoppingBag className="w-4 h-4 text-[#C2410C]" />
                     <span>Doorstep Delivery</span>
                   </div>
                   <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 text-[11px]">

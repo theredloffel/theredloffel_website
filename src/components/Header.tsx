@@ -14,7 +14,6 @@ import {
   History,
   X,
   MapPin,
-  Bike,
 } from "lucide-react";
 
 export function Header() {
@@ -172,16 +171,8 @@ export function Header() {
               </button>
             </div>
 
-            {/* 4. DRIVER HUB & SIGN IN OR USER LOGO */}
-            <div className="flex items-center gap-2.5 shrink-0">
-              <Link
-                href="/driver"
-                className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-white border border-[#E7E0D8] hover:border-[#C2410C] text-xs font-semibold text-[#1C1917] transition-all shadow-xs"
-                title="Driver Partner Hub"
-              >
-                <Bike className="w-4 h-4 text-[#C2410C]" />
-                <span className="hidden xl:inline">Driver Hub</span>
-              </Link>
+            {/* 4. SIGN IN OR USER LOGO */}
+            <div className="flex items-center gap-3 shrink-0">
               {user.isLoggedIn ? (
                 <div className="flex items-center gap-2">
                   <button
@@ -285,16 +276,8 @@ export function Header() {
               </div>
             </button>
 
-            {/* 3. DRIVER PORTAL LINK & USER PROFILE */}
+            {/* 3. USER PROFILE / SIGN IN */}
             <div className="flex items-center gap-1.5 shrink-0">
-              <Link
-                href="/driver"
-                className="w-10 h-10 rounded-full bg-white border border-[#E7E0D8] text-[#C2410C] flex items-center justify-center hover:bg-[#FAF8F5] transition-colors shadow-2xs active:scale-95"
-                title="Driver Partner Hub"
-              >
-                <Bike className="w-4 h-4" />
-              </Link>
-
               {user.isLoggedIn ? (
                 <Link
                   href="/profile"

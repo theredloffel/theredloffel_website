@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useKitchen } from "@/context/KitchenContext";
 import { Category, MenuItem } from "@/types";
-import { ChevronRight, X, Clock, Flame, Bike, Utensils, ChefHat } from "lucide-react";
+import { ChevronRight, X, Clock, Flame, ShoppingBag, CheckCircle2, Utensils, ChefHat } from "lucide-react";
 
 const CATEGORIES_CONFIG: { category: Category; label: string }[] = [
   { category: "All", label: "All Items" },
@@ -60,14 +60,14 @@ function getOrderStatusDisplay(status: string) {
         label: "In the Road",
         badgeColor: "bg-orange-500",
         textColor: "text-orange-400",
-        icon: <Bike className="w-4 h-4 text-white" />,
+        icon: <ShoppingBag className="w-4 h-4 text-white" />,
       };
     case "Delivered":
       return {
         label: "Delivered",
         badgeColor: "bg-emerald-500",
         textColor: "text-emerald-400",
-        icon: <Bike className="w-4 h-4 text-white" />,
+        icon: <CheckCircle2 className="w-4 h-4 text-white" />,
       };
     default:
       return {

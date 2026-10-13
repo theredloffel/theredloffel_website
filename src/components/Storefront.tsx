@@ -15,7 +15,6 @@ import { FloatingMenuCartWidget } from "@/components/FloatingMenuCartWidget";
 import {
   MapPin,
   Phone,
-  Bike,
 } from "lucide-react";
 
 export function Storefront() {
@@ -124,16 +123,9 @@ export function Storefront() {
 
           <div className="mt-12 pt-8 border-t border-[#292524] flex flex-col sm:flex-row items-center justify-between text-xs text-[#78716C] gap-4">
             <p>© 2026 The Red Löffel Cloud Kitchen. All rights reserved.</p>
-            <div className="flex items-center gap-6">
+            <div className="flex gap-6">
               <span>Privacy Policy</span>
               <span>Terms of Service</span>
-              <Link
-                href="/driver"
-                className="text-[#A8A29E] hover:text-[#FED7AA] flex items-center gap-1.5 transition-colors font-medium"
-              >
-                <Bike className="w-3.5 h-3.5 text-[#C2410C]" />
-                <span>Driver Partner Hub</span>
-              </Link>
             </div>
           </div>
         </div>

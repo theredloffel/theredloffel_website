@@ -289,11 +289,20 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Settings
-      const { baseDeliveryCharge: remoteFee, isStoreOpen: remoteStoreState } =
-        await settingsService.fetchSettings();
+      const {
+        baseDeliveryCharge: remoteFee,
+        isStoreOpen: remoteStoreState,
+        deliveryRiders: remoteRiders,
+      } = await settingsService.fetchSettings();
       if (isMounted) {
         if (remoteFee !== undefined) setBaseDeliveryCharge(remoteFee);
         if (remoteStoreState !== undefined) setIsStoreOpen(remoteStoreState);
+        if (remoteRiders !== undefined) {
+          setRiders(remoteRiders);
+          try {
+            localStorage.setItem("lebistro_riders", JSON.stringify(remoteRiders));
+          } catch {}
+        }
       }
     };
 
@@ -381,10 +390,20 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
 
     const unsubSettings = settingsService.subscribeToSettings({
       onChange: async () => {
-        const { baseDeliveryCharge: fee, isStoreOpen: open } = await settingsService.fetchSettings();
+        const {
+          baseDeliveryCharge: fee,
+          isStoreOpen: open,
+          deliveryRiders: remoteRiders,
+        } = await settingsService.fetchSettings();
         if (isMounted) {
           if (fee !== undefined) setBaseDeliveryCharge(fee);
           if (open !== undefined) setIsStoreOpen(open);
+          if (remoteRiders !== undefined) {
+            setRiders(remoteRiders);
+            try {
+              localStorage.setItem("lebistro_riders", JSON.stringify(remoteRiders));
+            } catch {}
+          }
         }
       },
     });
@@ -877,7 +896,12 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       const filtered = prev.filter(
         (r) => r.phone.replace(/\D/g, "").slice(-10) !== last10
       );
-      return [...filtered, rider];
+      const updated = [...filtered, rider];
+      try {
+        localStorage.setItem("lebistro_riders", JSON.stringify(updated));
+      } catch {}
+      settingsService.updateRiders(updated);
+      return updated;
     });
 
     showToast(`Driver ${rider.name} verified & added to fleet!`, "success");
@@ -885,7 +909,14 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeRider = (riderId: string) => {
-    setRiders((prev) => prev.filter((r) => r.id !== riderId));
+    setRiders((prev) => {
+      const updated = prev.filter((r) => r.id !== riderId);
+      try {
+        localStorage.setItem("lebistro_riders", JSON.stringify(updated));
+      } catch {}
+      settingsService.updateRiders(updated);
+      return updated;
+    });
     showToast("Driver removed from fleet", "info");
   };
 

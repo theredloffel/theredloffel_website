@@ -12,11 +12,20 @@ interface AdminHeaderProps {
   onLogout?: () => void;
   onOpenSettings?: () => void;
   activeTab?: string;
+  onOpenFleet?: () => void;
+  activeAdminView?: "orders" | "fleet";
 }
 
-export function AdminHeader({ onLogout, onOpenSettings, activeTab }: AdminHeaderProps) {
+export function AdminHeader({
+  onLogout,
+  onOpenSettings,
+  activeTab,
+  onOpenFleet,
+  activeAdminView,
+}: AdminHeaderProps) {
   const {
     orders,
+    riders,
     isStoreOpen,
     toggleStoreOpen,
     adminOrderSearch,
@@ -119,6 +128,23 @@ export function AdminHeader({ onLogout, onOpenSettings, activeTab }: AdminHeader
               </span>
             )}
           </button>
+
+          {/* 4b. DELIVERY FLEET BUTTON */}
+          {onOpenFleet && (
+            <button
+              type="button"
+              onClick={onOpenFleet}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 border ${
+                activeAdminView === "fleet"
+                  ? "bg-[#C2410C] text-white border-[#C2410C] shadow-xs"
+                  : "bg-white/10 hover:bg-white/20 text-[#FAF8F5] border-white/10"
+              }`}
+              title="Manage Delivery Fleet & Add Drivers"
+            >
+              <Bike className="w-4 h-4 text-[#FED7AA]" />
+              <span>Fleet ({riders.length})</span>
+            </button>
+          )}
 
           {/* 5. STORE OPEN OR CLOSED BUTTON */}
           <button
@@ -224,6 +250,23 @@ export function AdminHeader({ onLogout, onOpenSettings, activeTab }: AdminHeader
                 />
                 <span>{isStoreOpen ? "OPEN" : "CLOSED"}</span>
               </button>
+
+              {/* FLEET BUTTON ON MOBILE */}
+              {onOpenFleet && (
+                <button
+                  type="button"
+                  onClick={onOpenFleet}
+                  className={`px-2 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer border shrink-0 ${
+                    activeAdminView === "fleet"
+                      ? "bg-[#C2410C] text-white border-[#C2410C] shadow-xs"
+                      : "bg-orange-500/20 text-[#FED7AA] border-orange-500/40 hover:bg-orange-500/30"
+                  }`}
+                  title="Delivery Fleet & Drivers"
+                >
+                  <Bike className="w-3.5 h-3.5" />
+                  <span>Fleet ({riders.length})</span>
+                </button>
+              )}
 
               {/* SETTINGS */}
               {onOpenSettings && (

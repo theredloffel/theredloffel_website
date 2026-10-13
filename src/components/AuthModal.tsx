@@ -916,7 +916,7 @@ export function AuthModal() {
                     <div>
                       <h4 className="font-bold text-sm text-[#1C1917]">Digital Receipts</h4>
                       <p className="text-xs text-[#78716C]">
-                        Get digital bills and driver tracking alerts
+                        Get digital bills and live order alerts
                       </p>
                     </div>
                     <input
@@ -1003,7 +1003,7 @@ export function AuthModal() {
                     ? `Enter the 6-digit verification code sent to +91 ${phone}.`
                     : `Enter the 6-digit code sent to +91 ${phone} to setup your account.`)}
                 {step === "location" &&
-                  "Enter your delivery address for instant ordering and driver navigation."}
+                  "Enter your delivery address for instant ordering."}
               </p>
             </div>
 
@@ -1135,7 +1135,7 @@ export function AuthModal() {
                     Where should we deliver?
                   </h3>
                   <p className="text-xs text-[#78716C]">
-                    Enter your delivery address once for quick ordering and live turn-by-turn navigation for drivers
+                    Enter your delivery address once for quick and seamless ordering
                   </p>
                 </div>
 
@@ -1246,7 +1246,7 @@ export function AuthModal() {
                 {/* 6. Exact Address Preview Card with "Open in Google Maps" */}
                 <div className="space-y-1.5 pt-1">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[#78716C] block">
-                    Driver Navigation Preview
+                    Delivery Location Preview
                   </span>
                   <div className="p-3.5 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] space-y-2.5">
                     <div className="text-[11px] text-[#78716C] space-y-0.5">
