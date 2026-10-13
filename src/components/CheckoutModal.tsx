@@ -60,6 +60,21 @@ export function CheckoutModal() {
 
   if (!isCheckoutOpen) return null;
 
+  if (isAddAddressFlowOpen) {
+    return (
+      <AddAddressFlowModal
+        isOpen={true}
+        onClose={() => setIsAddAddressFlowOpen(false)}
+        onSuccess={(loc) => {
+          setStreet(loc.address);
+          if (loc.detail) setHouse(loc.detail);
+          setLandmark(loc.label);
+          setIsAddAddressFlowOpen(false);
+        }}
+      />
+    );
+  }
+
   const handleDetectLocation = () => {
     setIsDetectingLocation(true);
     if (typeof window !== "undefined" && "geolocation" in navigator) {
@@ -170,7 +185,7 @@ export function CheckoutModal() {
       onClick={(e) => {
         if (e.target === e.currentTarget) setIsCheckoutOpen(false);
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto overscroll-contain animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs overflow-y-auto overscroll-contain animate-in fade-in duration-200"
     >
       <div className="relative w-full max-w-2xl bg-[#FAF8F5] rounded-3xl border border-[#E7E0D8] shadow-2xl overflow-hidden my-8 overscroll-contain">
         {/* Header */}
@@ -384,15 +399,6 @@ export function CheckoutModal() {
           </div>
         </form>
 
-        <AddAddressFlowModal
-          isOpen={isAddAddressFlowOpen}
-          onClose={() => setIsAddAddressFlowOpen(false)}
-          onSuccess={(loc) => {
-            setStreet(loc.address);
-            if (loc.detail) setHouse(loc.detail);
-            setLandmark(loc.label);
-          }}
-        />
       </div>
     </div>
   );

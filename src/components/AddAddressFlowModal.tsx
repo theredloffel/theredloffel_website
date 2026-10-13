@@ -104,7 +104,7 @@ export function AddAddressFlowModal({ isOpen, onClose, onSuccess }: AddAddressFl
       onClick={(e) => {
         if (e.target === e.currentTarget) handleModalClose();
       }}
-      className="fixed inset-0 z-60 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/60 backdrop-blur-xs overscroll-contain animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/40 backdrop-blur-xs overscroll-contain animate-in fade-in duration-200"
     >
       <div className="relative w-full max-w-lg sm:max-w-xl max-h-[92vh] overflow-y-auto overscroll-contain bg-[#FAF8F5] rounded-t-3xl sm:rounded-4xl border-t sm:border border-[#E7E0D8] shadow-2xl p-5 sm:p-7">
         {/* Mobile handle indicator */}

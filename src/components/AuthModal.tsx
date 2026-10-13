@@ -373,12 +373,21 @@ export function AuthModal() {
     setOtpDigits(["", "", "", "", "", ""]);
   };
 
+  if (isAddAddressFlowOpen) {
+    return (
+      <AddAddressFlowModal
+        isOpen={true}
+        onClose={() => setIsAddAddressFlowOpen(false)}
+      />
+    );
+  }
+
   return (
     <div
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose();
       }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/60 backdrop-blur-xs overscroll-contain"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/40 backdrop-blur-xs overscroll-contain"
     >
       <div className="relative w-full max-w-lg sm:max-w-xl max-h-[90vh] sm:max-h-[92vh] overflow-y-auto overscroll-contain bg-[#FAF8F5] rounded-t-3xl sm:rounded-4xl border-t sm:border border-[#E7E0D8] shadow-2xl p-5 sm:p-7 md:p-8">
         {/* Mobile handle indicator */}
@@ -703,11 +712,6 @@ export function AuthModal() {
                   <ChevronRight className="w-5 h-5 text-[#A8A29E]" />
                 </button>
 
-                {/* Unified Add Address Flow Modal */}
-                <AddAddressFlowModal
-                  isOpen={isAddAddressFlowOpen}
-                  onClose={() => setIsAddAddressFlowOpen(false)}
-                />
 
                 <div className="pt-1">
                   <span className="text-xs font-bold text-[#78716C] uppercase tracking-wider block mb-2 px-1">

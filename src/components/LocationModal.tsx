@@ -40,6 +40,19 @@ export function LocationModal() {
 
   if (!isLocationModalOpen) return null;
 
+  if (isAddAddressFlowOpen) {
+    return (
+      <AddAddressFlowModal
+        isOpen={true}
+        onClose={() => setIsAddAddressFlowOpen(false)}
+        onSuccess={() => {
+          setIsAddAddressFlowOpen(false);
+          setIsLocationModalOpen(false);
+        }}
+      />
+    );
+  }
+
   const handleSelectLocation = (label: string, address: string) => {
     setLocationLabel(label);
     setLocationAddress(address);
@@ -83,7 +96,7 @@ export function LocationModal() {
       onClick={(e) => {
         if (e.target === e.currentTarget) setIsLocationModalOpen(false);
       }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs overscroll-contain animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs overscroll-contain animate-in fade-in duration-200"
     >
       <div className="w-full sm:max-w-md bg-[#FAF8F5] rounded-t-3xl sm:rounded-3xl border border-[#E7E0D8] shadow-2xl p-6 overflow-hidden max-h-[90vh] flex flex-col overscroll-contain">
         {/* Header */}
@@ -238,10 +251,6 @@ export function LocationModal() {
           </button>
         </div>
 
-        <AddAddressFlowModal
-          isOpen={isAddAddressFlowOpen}
-          onClose={() => setIsAddAddressFlowOpen(false)}
-        />
       </div>
     </div>
   );
