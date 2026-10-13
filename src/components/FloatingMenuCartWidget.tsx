@@ -88,6 +88,8 @@ export function FloatingMenuCartWidget() {
     menuItems,
     selectedCategory,
     setSelectedCategory,
+    searchQuery,
+    setSearchQuery,
     isVegOnly,
     user,
     userOrders,
@@ -155,6 +157,7 @@ export function FloatingMenuCartWidget() {
   }, [menuItems, isVegOnly]);
 
   const handleSelectCategory = (cat: Category) => {
+    setSearchQuery("");
     setSelectedCategory(cat);
     setIsMenuSheetOpen(false);
 

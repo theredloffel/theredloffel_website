@@ -224,6 +224,7 @@ export function MenuSection() {
 
   const scrollToCategory = (category: Category) => {
     isClickScrollingRef.current = true;
+    if (searchQuery) setSearchQuery("");
     setSelectedCategory(category);
 
     const isDesktop = window.innerWidth >= 768;
@@ -252,7 +253,7 @@ export function MenuSection() {
       setTimeout(() => {
         isClickScrollingRef.current = false;
       }, 700);
-    }, 50);
+    }, 100);
   };
 
   // Auto-scroll pill bar to keep active pill visible

@@ -77,6 +77,7 @@ export function AuthModal() {
 
   // Profile Sub-views (Your account, orders, addresses, etc.)
   const [profileView, setProfileView] = useState<ProfileViewType>("main");
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showShareBanner, setShowShareBanner] = useState(true);
   const [isAddAddressFlowOpen, setIsAddAddressFlowOpen] = useState(false);
   const [notifPreferences, setNotifPreferences] = useState({
@@ -557,11 +558,7 @@ export function AuthModal() {
                     {/* Log out */}
                     <button
                       type="button"
-                      onClick={() => {
-                        logout();
-                        setProfileView("main");
-                        showToast("Logged out successfully", "info");
-                      }}
+                      onClick={() => setShowLogoutConfirm(true)}
                       className="w-full p-4 flex items-center justify-between hover:bg-red-50/50 transition-colors text-left group"
                     >
                       <div className="flex items-center gap-3.5">
@@ -576,6 +573,52 @@ export function AuthModal() {
                     </button>
                   </div>
                 </div>
+
+                {/* Logout Confirmation Modal */}
+                {showLogoutConfirm && (
+                  <div
+                    className="fixed inset-0 z-70 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150"
+                    onClick={() => setShowLogoutConfirm(false)}
+                  >
+                    <div
+                      className="bg-white rounded-3xl border border-[#E7E0D8] p-6 max-w-sm w-full shadow-2xl text-center space-y-4 animate-in zoom-in-95 duration-150"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+                        <LogOut className="w-6 h-6 stroke-[2.5]" />
+                      </div>
+                      <div>
+                        <h3 className="font-serif text-xl font-bold text-[#1C1917]">
+                          Log out of your account?
+                        </h3>
+                        <p className="text-xs text-[#78716C] mt-1.5 leading-relaxed">
+                          Are you sure you want to log out? You will need to sign in with your mobile number again to view your orders and saved addresses.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setShowLogoutConfirm(false)}
+                          className="py-3 px-4 rounded-xl border border-[#E7E0D8] bg-[#FAF8F5] text-xs font-bold text-[#1C1917] hover:bg-[#F5EFEB] transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowLogoutConfirm(false);
+                            logout();
+                            setProfileView("main");
+                            showToast("Logged out successfully", "info");
+                          }}
+                          className="py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20 transition-all active:scale-95 cursor-pointer"
+                        >
+                          Yes, Log Out
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

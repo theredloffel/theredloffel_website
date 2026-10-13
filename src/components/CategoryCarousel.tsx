@@ -76,7 +76,7 @@ const CATEGORIES_DATA: CategoryItem[] = [
 ];
 
 export function CategoryCarousel() {
-  const { selectedCategory, setSelectedCategory } = useKitchen();
+  const { selectedCategory, setSelectedCategory, setSearchQuery } = useKitchen();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -87,6 +87,7 @@ export function CategoryCarousel() {
   };
 
   const handleCategorySelect = (category: Category) => {
+    setSearchQuery("");
     setSelectedCategory(category);
 
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
