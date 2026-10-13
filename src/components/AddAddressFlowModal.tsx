@@ -1,20 +1,23 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { useKitchen } from "@/context/KitchenContext";
 import {
   X,
-  ArrowLeft,
   MapPin,
-  ChevronRight,
   Home,
   Briefcase,
   Building,
   Check,
   Crosshair,
+  ExternalLink,
+  Loader2,
 } from "lucide-react";
-import { GoogleMapView, GoogleMapViewRef } from "@/components/GoogleMapView";
-import { DEFAULT_MAP_CENTER, GeocodedAddress } from "@/lib/googleMaps";
+import {
+  DEFAULT_MAP_CENTER,
+  getCurrentGPSLocation,
+  getGoogleMapsDirectionsUrl,
+} from "@/lib/googleMaps";
 
 interface AddAddressFlowModalProps {
   isOpen: boolean;
@@ -40,271 +43,274 @@ export function AddAddressFlowModal({ isOpen, onClose, onSuccess }: AddAddressFl
     showToast,
   } = useKitchen();
 
-  // Phase: "map" (First Map) -> "details" (Then Additional Information)
-  const [phase, setPhase] = useState<"map" | "details">("map");
-  const mapRef = useRef<GoogleMapViewRef>(null);
+  // Form Fields
+  const [receiverName, setReceiverName] = useState(user.name || "Customer");
+  const [house, setHouse] = useState("");
+  const [street, setStreet] = useState("Knowledge Park 3, Greater Noida");
+  const [landmark, setLandmark] = useState("Near NIET Business School");
+  const [selectedTag, setSelectedTag] = useState<"HOME" | "WORK" | "HOSTEL" | "OTHER">("HOSTEL");
 
-  // Coordinates & Address from Google Maps
-  const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number }>({
+  // Coordinates
+  const [currentCoords, setCurrentCoords] = useState<{ lat?: number; lng?: number }>({
     lat: DEFAULT_MAP_CENTER.lat,
     lng: DEFAULT_MAP_CENTER.lng,
   });
-  const [currentLocality, setCurrentLocality] = useState(DEFAULT_MAP_CENTER.locality);
-  const [currentCity, setCurrentCity] = useState(DEFAULT_MAP_CENTER.city);
-  const [addressLine, setAddressLine] = useState(DEFAULT_MAP_CENTER.address);
-
-  // Form Fields (Phase 2)
-  const [receiverName, setReceiverName] = useState(user.name || "Customer");
-  const [flatDetail, setFlatDetail] = useState("");
-  const [selectedTag, setSelectedTag] = useState<"HOME" | "WORK" | "HOSTEL" | "OTHER">("HOME");
+  const [isDetectingGps, setIsDetectingGps] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleAddressSelect = (geocoded: GeocodedAddress) => {
-    setCurrentCoords({ lat: geocoded.lat, lng: geocoded.lng });
-    setCurrentLocality(geocoded.locality || "Knowledge Park III");
-    setCurrentCity(geocoded.city || "Greater Noida");
-    setAddressLine(geocoded.formattedAddress);
-  };
-
-  const handleProceedToAdditional = () => {
-    if (!addressLine.trim()) {
-      setAddressLine(`${currentLocality}, ${currentCity}`);
+  const handleUseCurrentGPS = async () => {
+    setIsDetectingGps(true);
+    try {
+      const coords = await getCurrentGPSLocation();
+      setCurrentCoords({ lat: coords.lat, lng: coords.lng });
+      showToast("Current GPS coordinates pinned successfully", "success");
+    } catch {
+      showToast("Could not detect GPS. Using default Greater Noida location", "info");
+    } finally {
+      setIsDetectingGps(false);
     }
-    setPhase("details");
   };
 
   const handleSaveAddressSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addressLine.trim()) {
-      showToast("Please enter delivery address", "warning");
+    if (!house.trim() && !street.trim()) {
+      showToast("Please enter house or street address", "warning");
       return;
     }
 
-    const finalDetail = flatDetail.trim()
-      ? `${flatDetail.trim()}, ${currentCity}`
-      : currentCity;
+    const fullAddress = [
+      house.trim(),
+      street.trim(),
+      landmark.trim() ? `near ${landmark.trim()}` : "",
+      "Greater Noida",
+    ]
+      .filter(Boolean)
+      .join(", ");
 
     const savedData = {
       label: selectedTag,
-      address: addressLine.trim(),
-      detail: finalDetail,
-      house: flatDetail.trim() || finalDetail,
-      street: addressLine.trim(),
-      landmark: currentLocality,
-      lat: currentCoords.lat,
-      lng: currentCoords.lng,
+      address: fullAddress,
+      detail: house.trim() || street.trim(),
+      house: house.trim() || "Delivery Point",
+      street: street.trim() || "Knowledge Park 3, Greater Noida",
+      landmark: landmark.trim(),
+      lat: currentCoords.lat || DEFAULT_MAP_CENTER.lat,
+      lng: currentCoords.lng || DEFAULT_MAP_CENTER.lng,
       accuracy: 10,
     };
 
     addSavedLocation(savedData);
     setLocationLabel(selectedTag);
-    setLocationAddress(addressLine.trim());
+    setLocationAddress(fullAddress);
 
-    showToast(`New address saved as ${selectedTag} and set as active`, "success");
+    showToast(`Address saved as ${selectedTag} and set as active delivery location`, "success");
     onSuccess?.(savedData);
     onClose();
-    setPhase("map");
   };
 
-  const handleModalClose = () => {
-    setPhase("map");
-    onClose();
-  };
+  const previewGoogleMapsUrl = getGoogleMapsDirectionsUrl({
+    lat: currentCoords.lat,
+    lng: currentCoords.lng,
+    house: house.trim() || "Delivery Point",
+    street: street.trim() || "Knowledge Park 3, Greater Noida",
+    landmark: landmark.trim(),
+  });
 
   return (
     <div
       onClick={(e) => {
-        if (e.target === e.currentTarget) handleModalClose();
+        if (e.target === e.currentTarget) onClose();
       }}
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/40 backdrop-blur-xs overscroll-contain animate-in fade-in duration-200"
     >
-      <div className="relative w-full max-w-lg sm:max-w-xl max-h-[92vh] overflow-y-auto overscroll-contain bg-[#FAF8F5] rounded-t-3xl sm:rounded-4xl border-t sm:border border-[#E7E0D8] shadow-2xl p-5 sm:p-7">
+      <div className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto overscroll-contain bg-[#FAF8F5] rounded-t-3xl sm:rounded-4xl border-t sm:border border-[#E7E0D8] shadow-2xl p-5 sm:p-7">
         {/* Mobile handle indicator */}
         <div className="w-12 h-1.5 bg-[#D6D3D1] rounded-full mx-auto mb-3 sm:hidden" />
 
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#E7E0D8]">
           <div className="flex items-center gap-2.5">
-            {phase === "details" ? (
-              <button
-                type="button"
-                onClick={() => setPhase("map")}
-                className="w-8 h-8 -ml-1 rounded-full hover:bg-black/5 flex items-center justify-center text-[#1C1917] transition-colors"
-                title="Back to map"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-            ) : null}
-            <h3 className="font-serif text-xl font-bold text-[#1C1917]">
-              {phase === "map" ? "Select on Google Maps" : "Additional Information"}
-            </h3>
+            <div className="w-8 h-8 rounded-full bg-[#1C1917] text-[#FED7AA] flex items-center justify-center">
+              <MapPin className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="font-serif text-lg sm:text-xl font-bold text-[#1C1917]">
+                Add Delivery Address
+              </h3>
+              <p className="text-[11px] text-[#78716C]">
+                Saved addresses allow 1-click turn-by-turn navigation for drivers
+              </p>
+            </div>
           </div>
 
           <button
             type="button"
-            onClick={handleModalClose}
-            className="w-8 h-8 rounded-full border border-[#E7E0D8] bg-white flex items-center justify-center text-[#78716C] hover:text-[#1C1917]"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full border border-[#E7E0D8] bg-white flex items-center justify-center text-[#78716C] hover:text-[#1C1917] cursor-pointer"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* ========================================================= */}
-        {/* PHASE 1: GOOGLE MAPS WITH LIVE SEARCH & PIN               */}
-        {/* ========================================================= */}
-        {phase === "map" ? (
-          <div className="space-y-3.5 pt-3">
-            {/* Live Interactive Google Map */}
-            <div className="relative w-full h-72 sm:h-80 rounded-2xl border border-[#E2E8F0] overflow-hidden bg-[#F1F5F9] shadow-inner select-none">
-              <GoogleMapView
-                ref={mapRef}
-                initialLat={currentCoords.lat}
-                initialLng={currentCoords.lng}
-                onAddressSelect={handleAddressSelect}
-                className="w-full h-full rounded-none"
-                showSearchBar={true}
-              />
-            </div>
+        {/* Form Body */}
+        <form onSubmit={handleSaveAddressSubmit} className="space-y-4 pt-4">
+          {/* Receiver Name */}
+          <div>
+            <label className="block text-xs font-bold text-[#1C1917] mb-1.5 uppercase tracking-wider">
+              Receiver Full Name
+            </label>
+            <input
+              type="text"
+              value={receiverName}
+              onChange={(e) => setReceiverName(e.target.value)}
+              placeholder="e.g. Parikshit Singh"
+              className="w-full px-4 py-3 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold focus:outline-hidden focus:border-[#C2410C]"
+              required
+            />
+          </div>
 
-            {/* Address Banner Card */}
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-[#E7E0D8] shadow-xs flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-[#1C1917] text-[#FED7AA] flex items-center justify-center shrink-0 shadow-2xs">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm font-extrabold text-[#1C1917] truncate leading-tight">
-                    {currentLocality}
+          {/* House / Flat / Hostel */}
+          <div>
+            <label className="block text-xs font-bold text-[#1C1917] mb-1.5 uppercase tracking-wider">
+              House / Hostel / Flat / Room No. *
+            </label>
+            <input
+              type="text"
+              autoFocus
+              value={house}
+              onChange={(e) => setHouse(e.target.value)}
+              placeholder="e.g. Nalanda Living Boys Hostel, Room 204"
+              className="w-full px-4 py-3 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold focus:outline-hidden focus:border-[#C2410C]"
+              required
+            />
+          </div>
+
+          {/* Street / Building / Area */}
+          <div>
+            <label className="block text-xs font-bold text-[#1C1917] mb-1.5 uppercase tracking-wider">
+              Street / Building / Area *
+            </label>
+            <input
+              type="text"
+              value={street}
+              onChange={(e) => setStreet(e.target.value)}
+              placeholder="e.g. Knowledge Park 3, Greater Noida"
+              className="w-full px-4 py-3 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold focus:outline-hidden focus:border-[#C2410C]"
+              required
+            />
+          </div>
+
+          {/* Landmark */}
+          <div>
+            <label className="block text-xs font-bold text-[#1C1917] mb-1.5 uppercase tracking-wider">
+              Landmark (Optional)
+            </label>
+            <input
+              type="text"
+              value={landmark}
+              onChange={(e) => setLandmark(e.target.value)}
+              placeholder="e.g. Near NIET Business School / Sharda University"
+              className="w-full px-4 py-3 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold focus:outline-hidden focus:border-[#C2410C]"
+            />
+          </div>
+
+          {/* Save As Tag */}
+          <div>
+            <label className="block text-xs font-bold text-[#1C1917] mb-1.5 uppercase tracking-wider">
+              Save Address As
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { tag: "HOSTEL", icon: <Building className="w-3.5 h-3.5" /> },
+                { tag: "HOME", icon: <Home className="w-3.5 h-3.5" /> },
+                { tag: "WORK", icon: <Briefcase className="w-3.5 h-3.5" /> },
+                { tag: "OTHER", icon: <MapPin className="w-3.5 h-3.5" /> },
+              ].map(({ tag, icon }) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={() => setSelectedTag(tag as any)}
+                  className={`py-2 px-1.5 rounded-xl text-xs font-extrabold flex flex-col items-center gap-1 border transition-all cursor-pointer ${
+                    selectedTag === tag
+                      ? "bg-[#C2410C] text-white border-[#C2410C] shadow-md shadow-[#C2410C]/25"
+                      : "bg-white text-[#78716C] border-[#E7E0D8] hover:border-[#1C1917]"
+                  }`}
+                >
+                  {icon}
+                  <span className="text-[10px]">{tag}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* GPS Coordinate Pin Button */}
+          <button
+            type="button"
+            onClick={handleUseCurrentGPS}
+            disabled={isDetectingGps}
+            className="w-full py-2.5 px-3.5 rounded-xl border border-emerald-300 bg-[#F0FDF4] text-emerald-800 hover:bg-emerald-100 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            {isDetectingGps ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                <span>Detecting GPS Coordinates...</span>
+              </>
+            ) : (
+              <>
+                <Crosshair className="w-4 h-4 text-emerald-600" />
+                <span>Pin My Exact Live GPS Location</span>
+              </>
+            )}
+          </button>
+
+          {/* Exact Address Preview Card with "Open in Google Maps" */}
+          <div className="space-y-1.5 pt-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#78716C] block">
+              Driver Navigation Preview
+            </span>
+            <div className="p-3.5 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] space-y-2.5">
+              <div className="text-[11px] text-[#78716C] space-y-0.5">
+                <p className="font-semibold text-[#1C1917] flex items-center gap-1.5 text-xs">
+                  <MapPin className="w-3.5 h-3.5 text-[#C2410C] shrink-0" />
+                  <span>{house.trim() || "House / Hostel Name"}</span>
+                </p>
+                <p className="truncate text-[#57534E] text-xs">
+                  {street.trim() || "Knowledge Park 3, Greater Noida"}
+                </p>
+                {landmark.trim() && (
+                  <p className="text-[#A8A29E] text-[10px]">
+                    Landmark: {landmark.trim()}
                   </p>
-                  <p className="text-[11px] sm:text-xs text-[#78716C] truncate mt-0.5" title={addressLine}>
-                    {addressLine}
-                  </p>
-                </div>
+                )}
               </div>
+
+              {/* Clickable Google Maps Action Button (Directions from driver to customer) */}
+              <a
+                href={previewGoogleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2 px-3 rounded-xl bg-white border border-[#E7E0D8] hover:border-[#1C1917] text-xs font-semibold text-[#1C1917] flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+              >
+                <MapPin className="w-3.5 h-3.5 text-rose-600" />
+                <span>Open in Google Maps</span>
+                <ExternalLink className="w-3 h-3 text-[#A8A29E]" />
+              </a>
             </div>
+          </div>
 
-            {/* Use Current GPS Location Button */}
+          {/* Save Address Button */}
+          <div className="pt-2">
             <button
-              type="button"
-              onClick={() => mapRef.current?.locateCurrentPosition()}
-              className="w-full py-2.5 px-3.5 rounded-xl border-2 border-[#00875A] bg-[#F0FDF4] text-[#00875A] hover:bg-emerald-100/70 text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs cursor-pointer"
+              type="submit"
+              className="w-full py-3.5 px-5 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] text-white font-bold text-sm shadow-lg shadow-[#C2410C]/25 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
             >
-              <Crosshair className="w-4 h-4 text-[#00875A]" />
-              <span>Use current location (GPS)</span>
-            </button>
-
-            {/* Next Button */}
-            <button
-              type="button"
-              onClick={handleProceedToAdditional}
-              className="w-full py-3.5 px-4 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] text-white font-bold text-sm sm:text-base shadow-lg shadow-[#C2410C]/25 flex items-center justify-center gap-1.5 transition-all active:scale-98"
-            >
-              <span>Confirm Location & Add Details</span>
-              <ChevronRight className="w-4 h-4 ml-0.5" />
+              <Check className="w-4 h-4" />
+              <span>Save Address & Select for Delivery</span>
             </button>
           </div>
-        ) : (
-          /* ========================================================= */
-          /* PHASE 2: DETAILS FORM                                     */
-          /* ========================================================= */
-          <form onSubmit={handleSaveAddressSubmit} className="space-y-4 pt-3">
-            {/* Back to map link */}
-            <button
-              type="button"
-              onClick={() => setPhase("map")}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-[#C2410C] hover:underline"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Adjust pin on map</span>
-            </button>
-
-            {/* 1. Name */}
-            <div>
-              <label className="block text-xs font-bold text-[#1C1917] mb-1.5 uppercase tracking-wider">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={receiverName}
-                onChange={(e) => setReceiverName(e.target.value)}
-                placeholder="e.g. Parikshit Singh"
-                className="w-full px-4 py-3.5 rounded-2xl border border-[#E7E0D8] bg-white text-base text-[#1C1917] font-semibold focus:outline-hidden focus:border-[#C2410C]"
-                required
-              />
-            </div>
-
-            {/* 2. Delivery address (prefilled from Google Maps) */}
-            <div>
-              <label className="block text-xs font-bold text-[#1C1917] mb-1.5 uppercase tracking-wider">
-                Delivery Address / Building / Street *
-              </label>
-              <textarea
-                rows={3}
-                value={addressLine}
-                onChange={(e) => setAddressLine(e.target.value)}
-                placeholder="Building name, street, locality..."
-                className="w-full px-4 py-3 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold focus:outline-hidden focus:border-[#C2410C] resize-none"
-                required
-              />
-            </div>
-
-            {/* 3. Flat / Room / Floor */}
-            <div>
-              <label className="block text-xs font-bold text-[#1C1917] mb-1.5 uppercase tracking-wider">
-                Flat / Room / Floor (Optional)
-              </label>
-              <input
-                type="text"
-                value={flatDetail}
-                onChange={(e) => setFlatDetail(e.target.value)}
-                placeholder="e.g. Room 204, Block C, 2nd Floor"
-                className="w-full px-4 py-3.5 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold focus:outline-hidden focus:border-[#C2410C]"
-              />
-            </div>
-
-            {/* 4. Save As tags */}
-            <div>
-              <label className="block text-xs font-bold text-[#1C1917] mb-1.5 uppercase tracking-wider">
-                Save Address As
-              </label>
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { tag: "HOME", icon: <Home className="w-3.5 h-3.5" /> },
-                  { tag: "WORK", icon: <Briefcase className="w-3.5 h-3.5" /> },
-                  { tag: "HOSTEL", icon: <Building className="w-3.5 h-3.5" /> },
-                  { tag: "OTHER", icon: <MapPin className="w-3.5 h-3.5" /> },
-                ].map(({ tag, icon }) => (
-                  <button
-                    key={tag}
-                    type="button"
-                    onClick={() => setSelectedTag(tag as any)}
-                    className={`py-2 px-1.5 rounded-xl text-xs font-extrabold flex flex-col items-center gap-1 border transition-all ${
-                      selectedTag === tag
-                        ? "bg-[#C2410C] text-white border-[#C2410C] shadow-md shadow-[#C2410C]/25"
-                        : "bg-white text-[#78716C] border-[#E7E0D8] hover:border-[#1C1917]"
-                    }`}
-                  >
-                    {icon}
-                    <span className="text-[10px]">{tag}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 5. Save Address & Set as Active */}
-            <div className="pt-2">
-              <button
-                type="submit"
-                className="w-full py-4 px-5 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] text-white font-bold text-base shadow-lg shadow-[#C2410C]/25 flex items-center justify-center gap-2 transition-all active:scale-98"
-              >
-                <Check className="w-5 h-5" />
-                <span>Save Address & Set as Active</span>
-              </button>
-            </div>
-          </form>
-        )}
+        </form>
       </div>
     </div>
   );

@@ -30,15 +30,18 @@ import {
   LogOut,
   Plus,
   Pin,
+  ExternalLink,
 } from "lucide-react";
 import { AddAddressFlowModal } from "@/components/AddAddressFlowModal";
 import { isRegisteredUser, registerUserPhone } from "@/lib/auth";
-import { GoogleMapView, GoogleMapViewRef } from "@/components/GoogleMapView";
-import { DEFAULT_MAP_CENTER, GeocodedAddress } from "@/lib/googleMaps";
+import {
+  DEFAULT_MAP_CENTER,
+  getGoogleMapsDirectionsUrl,
+  getCurrentGPSLocation,
+} from "@/lib/googleMaps";
 import { auth, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "@/lib/firebase";
 
 type AuthStep = "phone" | "otp" | "location";
-type Step3SubView = "map" | "form";
 type ProfileViewType = "main" | "orders" | "addresses" | "about" | "notifications";
 
 export function AuthModal() {
@@ -86,10 +89,7 @@ export function AuthModal() {
     offers: false,
   });
 
-  // Step 3 Sub-view: "map" (pin picker like screenshot) | "form" (name, address, flat, save as)
-  const [step3View, setStep3View] = useState<Step3SubView>("map");
   const [isExistingUser, setIsExistingUser] = useState(false);
-  const mapRef = useRef<GoogleMapViewRef>(null);
 
   // Step 3 Form State
   const [nameInput, setNameInput] = useState(user.name || "");
@@ -241,10 +241,9 @@ export function AuthModal() {
           setIsCheckoutOpen(true);
         }
       } else {
-        // FIRST TIME USER: 3 STAGES! Advance to stage 3 for map pin and delivery address
+        // FIRST TIME USER: 3 STAGES! Advance to stage 3 for delivery address
         setStep("location");
-        setStep3View("map");
-        showToast("Phone verified! Step 3 of 3: Pin your delivery location on map.", "success");
+        showToast("Phone verified! Step 3 of 3: Enter your delivery address.", "success");
       }
     }, 400);
   };
@@ -326,11 +325,6 @@ export function AuthModal() {
     showToast("GPS centered on current location", "success");
   };
 
-  // Transition from Map view to Address Details form
-  const handleProceedToAddDetails = () => {
-    setStep3View("form");
-  };
-
   // STEP 3: Final Form Submit
   const handleLocationSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -366,7 +360,6 @@ export function AuthModal() {
     // 4. Close modal & reset
     setIsAuthOpen(false);
     setStep("phone");
-    setStep3View("map");
     setOtpDigits(["", "", "", "", "", ""]);
     showToast(`Address saved to ${locationTag}! Welcome to The Red Löffel!`, "success");
 
@@ -380,7 +373,6 @@ export function AuthModal() {
     setIsAuthOpen(false);
     setProfileView("main");
     setStep("phone");
-    setStep3View("map");
     setOtpDigits(["", "", "", "", "", ""]);
   };
 
@@ -999,8 +991,7 @@ export function AuthModal() {
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#1C1917]">
                 {step === "phone" && (cart.length > 0 ? "Login to Checkout" : "Sign In with Mobile")}
                 {step === "otp" && (isExistingUser ? "Verify OTP Code" : "Step 2 of 3 • Verify OTP")}
-                {step === "location" &&
-                  (step3View === "map" ? "Step 3 of 3 • Pin Location on Map" : "Step 3 of 3 • Complete Address")}
+                {step === "location" && "Step 3 of 3 • Delivery Address"}
               </h2>
               <p className="text-xs text-[#78716C] mt-1 leading-relaxed">
                 {step === "phone" &&
@@ -1012,9 +1003,7 @@ export function AuthModal() {
                     ? `Enter the 6-digit verification code sent to +91 ${phone}.`
                     : `Enter the 6-digit code sent to +91 ${phone} to setup your account.`)}
                 {step === "location" &&
-                  (step3View === "map"
-                    ? "Adjust the pin on the map to set where we should deliver your food."
-                    : "Enter your delivery details and save your address tag.")}
+                  "Enter your delivery address for instant ordering and driver navigation."}
               </p>
             </div>
 
@@ -1137,200 +1126,176 @@ export function AuthModal() {
             )}
 
             {/* -------------------------------------------------------- */}
-            {/* STEP 3: OPENS MAP VIEW & THEN DETAILS RIGHT HERE!        */}
+            {/* STEP 3: DIRECT ADDRESS FORM & LIVE GOOGLE MAPS PREVIEW   */}
             {/* -------------------------------------------------------- */}
             {step === "location" && (
-              <div>
-                {/* SUB-VIEW A: MAP PIN PICKER (Exact layout like reference image!) */}
-                {step3View === "map" ? (
-                  <div className="space-y-3">
-                    {/* Live Interactive Google Map with Places Search */}
-                    <div className="relative w-full h-64 sm:h-72 rounded-2xl border border-[#E2E8F0] overflow-hidden bg-[#F1F5F9] shadow-inner select-none">
-                      <GoogleMapView
-                        ref={mapRef}
-                        initialLat={DEFAULT_MAP_CENTER.lat}
-                        initialLng={DEFAULT_MAP_CENTER.lng}
-                        onAddressSelect={(geocoded) => {
-                          setCurrentCoords({ lat: geocoded.lat, lng: geocoded.lng });
-                          setCurrentLocality(geocoded.locality || "Knowledge Park III");
-                          setCurrentCity(geocoded.city || "Greater Noida");
-                          setAddressInput(geocoded.formattedAddress);
-                        }}
-                        className="w-full h-full rounded-none"
-                        showSearchBar={true}
-                      />
-                    </div>
+              <form onSubmit={handleLocationSubmit} className="space-y-3.5 sm:space-y-4">
+                <div className="space-y-1">
+                  <h3 className="font-serif text-lg font-bold text-[#1C1917]">
+                    Where should we deliver?
+                  </h3>
+                  <p className="text-xs text-[#78716C]">
+                    Enter your delivery address once for quick ordering and live turn-by-turn navigation for drivers
+                  </p>
+                </div>
 
-                    {/* Bottom Delivering Box matching brand theme */}
-                    <div className="p-3.5 rounded-2xl border border-[#E7E0D8] bg-white shadow-xs space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
-                          Delivering your order to
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-full bg-[#1C1917] flex items-center justify-center text-[#FED7AA] shrink-0 shadow-2xs">
-                            <MapPin className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs sm:text-sm font-extrabold text-[#1C1917] truncate leading-tight">
-                              {currentLocality}
-                            </p>
-                            <p className="text-[11px] text-[#78716C] truncate mt-0.5" title={addressInput}>
-                              {addressInput}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="shrink-0 px-2.5 py-1 rounded-xl bg-orange-50 border border-orange-200 text-[#C2410C] text-[11px] font-bold">
-                          Pinned
-                        </div>
-                      </div>
-
-                      {/* Use Current GPS Location Button */}
-                      <button
-                        type="button"
-                        onClick={() => mapRef.current?.locateCurrentPosition()}
-                        className="w-full py-2.5 px-3.5 rounded-xl border-2 border-[#00875A] bg-[#F0FDF4] text-[#00875A] hover:bg-emerald-100/70 text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs cursor-pointer"
-                      >
-                        <Crosshair className="w-4 h-4 text-[#00875A]" />
-                        <span>Use current location (GPS)</span>
-                      </button>
-
-                      {/* Primary Brand Button: Add more address details ▸ */}
-                      <button
-                        type="button"
-                        onClick={handleProceedToAddDetails}
-                        className="w-full py-3.5 px-4 rounded-xl bg-[#C2410C] hover:bg-[#9A3412] text-white text-sm font-bold shadow-lg shadow-[#C2410C]/25 flex items-center justify-center gap-1.5 transition-all active:scale-98"
-                      >
-                        <span>Confirm Location & Add Details</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
+                {/* 1. House / Hostel / Flat / Room */}
+                <div>
+                  <label className="block text-xs font-bold text-[#1C1917] mb-1 uppercase tracking-wider">
+                    House / Hostel / Flat / Room No. *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={detailInput}
+                      onChange={(e) => setDetailInput(e.target.value)}
+                      placeholder="e.g. Nalanda Living Boys Hostel, Room 204"
+                      className="w-full px-4 py-3 pl-11 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold placeholder:text-[#A8A29E] focus:outline-hidden focus:border-[#C2410C] transition-all"
+                      required
+                    />
+                    <Building className="w-4 h-4 text-[#C2410C] absolute left-3.5 top-3.5" />
                   </div>
-                ) : (
-                  /* SUB-VIEW B: EXACT FORM FIELDS REQUESTED IN ORDER: */
-                  /* 1. Name                                          */
-                  /* 2. Delivery address / building / street          */
-                  /* 3. Flat                                          */
-                  /* 4. Use current location / Adjust on Map          */
-                  /* 5. Save as                                       */
-                  /* 6. Save Location & Start Ordering                */
-                  <form onSubmit={handleLocationSubmit} className="space-y-3.5 sm:space-y-4">
-                    {/* Back to map button */}
-                    <button
-                      type="button"
-                      onClick={() => setStep3View("map")}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#C2410C] hover:underline mb-1"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Adjust pin on map</span>
-                    </button>
+                </div>
 
-                    {/* 1. DELIVERY ADDRESS / BUILDING / STREET */}
-                    <div>
-                      <label className="block text-xs font-bold text-[#1C1917] mb-1 uppercase tracking-wider">
-                        Delivery Address / Building / Street *
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          autoFocus
-                          value={addressInput}
-                          onChange={(e) => {
-                            setAddressInput(e.target.value);
-                            setAddressError("");
-                          }}
-                          placeholder="House / Flat / Block / Street address"
-                          className="w-full px-4 py-3 pl-11 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold placeholder:text-[#A8A29E] focus:outline-hidden focus:border-[#C2410C] focus:ring-2 focus:ring-[#C2410C]/20 transition-all"
-                          required
-                        />
-                        <MapPin className="w-4 h-4 text-[#C2410C] absolute left-3.5 top-3.5" />
-                      </div>
-                      {addressError && (
-                        <p className="text-xs text-red-600 font-semibold mt-1">{addressError}</p>
+                {/* 2. Street / Building / Area */}
+                <div>
+                  <label className="block text-xs font-bold text-[#1C1917] mb-1 uppercase tracking-wider">
+                    Street / Building / Area *
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={addressInput}
+                      onChange={(e) => {
+                        setAddressInput(e.target.value);
+                        setAddressError("");
+                      }}
+                      placeholder="e.g. Knowledge Park 3, Greater Noida"
+                      className="w-full px-4 py-3 pl-11 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold placeholder:text-[#A8A29E] focus:outline-hidden focus:border-[#C2410C] focus:ring-2 focus:ring-[#C2410C]/20 transition-all"
+                      required
+                    />
+                    <MapPin className="w-4 h-4 text-[#C2410C] absolute left-3.5 top-3.5" />
+                  </div>
+                  {addressError && (
+                    <p className="text-xs text-red-600 font-semibold mt-1">{addressError}</p>
+                  )}
+                </div>
+
+                {/* 3. Landmark */}
+                <div>
+                  <label className="block text-xs font-bold text-[#1C1917] mb-1 uppercase tracking-wider">
+                    Landmark (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={currentLocality}
+                    onChange={(e) => setCurrentLocality(e.target.value)}
+                    placeholder="e.g. Near NIET Business School / Sharda University"
+                    className="w-full px-4 py-3 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold placeholder:text-[#A8A29E] focus:outline-hidden focus:border-[#C2410C] transition-all"
+                  />
+                </div>
+
+                {/* 4. Use Current GPS Location */}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const pos = await getCurrentGPSLocation();
+                      setCurrentCoords({ lat: pos.lat, lng: pos.lng });
+                      showToast("GPS live location pinned successfully", "success");
+                    } catch {
+                      showToast("Could not detect GPS. Using default Greater Noida location", "info");
+                    }
+                  }}
+                  className="w-full py-2.5 px-3.5 rounded-xl border border-emerald-300 bg-[#F0FDF4] text-emerald-800 hover:bg-emerald-100 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Crosshair className="w-4 h-4 text-emerald-600" />
+                  <span>Pin My Exact Live GPS Location</span>
+                </button>
+
+                {/* 5. Save As Tag Selector */}
+                <div>
+                  <label className="block text-xs font-bold text-[#1C1917] mb-1.5 uppercase tracking-wider">
+                    Save Address As
+                  </label>
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { tag: "HOSTEL", icon: <Building className="w-3.5 h-3.5" /> },
+                      { tag: "HOME", icon: <Home className="w-3.5 h-3.5" /> },
+                      { tag: "WORK", icon: <Briefcase className="w-3.5 h-3.5" /> },
+                      { tag: "OTHER", icon: <MapPin className="w-3.5 h-3.5" /> },
+                    ].map(({ tag, icon }) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setLocationTag(tag as any)}
+                        className={`py-2 px-1.5 rounded-xl text-xs font-extrabold flex flex-col items-center gap-1 border transition-all cursor-pointer ${
+                          locationTag === tag
+                            ? "bg-[#C2410C] text-white border-[#C2410C] shadow-md shadow-[#C2410C]/25"
+                            : "bg-white text-[#78716C] border-[#E7E0D8] hover:border-[#1C1917]"
+                        }`}
+                      >
+                        {icon}
+                        <span className="text-[10px]">{tag}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 6. Exact Address Preview Card with "Open in Google Maps" */}
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#78716C] block">
+                    Driver Navigation Preview
+                  </span>
+                  <div className="p-3.5 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] space-y-2.5">
+                    <div className="text-[11px] text-[#78716C] space-y-0.5">
+                      <p className="font-semibold text-[#1C1917] flex items-center gap-1.5 text-xs">
+                        <MapPin className="w-3.5 h-3.5 text-[#C2410C] shrink-0" />
+                        <span>{detailInput.trim() || "House / Hostel Name"}</span>
+                      </p>
+                      <p className="truncate text-xs text-[#57534E]">
+                        {addressInput.trim() || "Knowledge Park 3, Greater Noida"}
+                      </p>
+                      {currentLocality.trim() && (
+                        <p className="text-[#A8A29E] text-[10px]">
+                          Landmark: {currentLocality.trim()}
+                        </p>
                       )}
                     </div>
 
-                    {/* 3. FLAT */}
-                    <div>
-                      <label className="block text-xs font-bold text-[#1C1917] mb-1 uppercase tracking-wider">
-                        Flat / Room / Floor / House No. (Optional)
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={detailInput}
-                          onChange={(e) => setDetailInput(e.target.value)}
-                          placeholder="e.g. Room 204, Block C, 2nd Floor"
-                          className="w-full px-4 py-3 pl-11 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold placeholder:text-[#A8A29E] focus:outline-hidden focus:border-[#C2410C] transition-all"
-                        />
-                        <Building className="w-4 h-4 text-[#A8A29E] absolute left-3.5 top-3.5" />
-                      </div>
-                    </div>
+                    <a
+                      href={getGoogleMapsDirectionsUrl({
+                        lat: currentCoords.lat,
+                        lng: currentCoords.lng,
+                        house: detailInput.trim(),
+                        street: addressInput.trim(),
+                        landmark: currentLocality.trim(),
+                      })}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2 px-3 rounded-xl bg-white border border-[#E7E0D8] hover:border-[#1C1917] text-xs font-semibold text-[#1C1917] flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-rose-600" />
+                      <span>Open in Google Maps</span>
+                      <ExternalLink className="w-3 h-3 text-[#A8A29E]" />
+                    </a>
+                  </div>
+                </div>
 
-                    {/* 4. USE CURRENT LOCATION / PIN ON MAP */}
-                    <div>
-                      <button
-                        type="button"
-                        onClick={() => setStep3View("map")}
-                        className="w-full py-3 px-4 rounded-2xl bg-[#FFF7ED] border border-[#FDBA74] text-[#C2410C] hover:bg-[#FED7AA]/40 transition-all flex items-center justify-between text-xs font-bold group shadow-2xs"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Crosshair className="w-4 h-4 text-[#C2410C] group-hover:scale-110 transition-transform" />
-                          <span>Pin on Map / Use GPS Location</span>
-                        </div>
-                        <span className="text-[10px] uppercase font-extrabold text-[#9A3412] bg-[#FED7AA] px-2.5 py-0.5 rounded-full border border-[#FDBA74]">
-                          Adjust Pin
-                        </span>
-                      </button>
-                    </div>
-
-                    {/* 5. SAVE AS */}
-                    <div>
-                      <label className="block text-xs font-bold text-[#1C1917] mb-1.5 uppercase tracking-wider">
-                        Save As
-                      </label>
-                      <div className="grid grid-cols-4 gap-2">
-                        {[
-                          { tag: "HOME", icon: <Home className="w-3.5 h-3.5" /> },
-                          { tag: "WORK", icon: <Briefcase className="w-3.5 h-3.5" /> },
-                          { tag: "HOSTEL", icon: <Building className="w-3.5 h-3.5" /> },
-                          { tag: "OTHER", icon: <MapPin className="w-3.5 h-3.5" /> },
-                        ].map(({ tag, icon }) => (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => setLocationTag(tag as any)}
-                            className={`py-2 px-1.5 rounded-xl text-xs font-extrabold flex flex-col items-center gap-1 border transition-all ${locationTag === tag
-                                ? "bg-[#C2410C] text-white border-[#C2410C] shadow-md shadow-[#C2410C]/25"
-                                : "bg-white text-[#78716C] border-[#E7E0D8] hover:border-[#1C1917]"
-                              }`}
-                          >
-                            {icon}
-                            <span className="text-[10px]">{tag}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* 6. SUBMIT BUTTON */}
-                    <div className="pt-2">
-                      <button
-                        type="submit"
-                        className="w-full py-4 px-5 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] text-white font-bold text-base shadow-lg shadow-[#C2410C]/25 flex items-center justify-center gap-2 transition-all active:scale-98"
-                      >
-                        <Check className="w-5 h-5" />
-                        <span>
-                          {cart.length > 0 ? "Save & Proceed to Checkout" : "Save Location & Start Ordering"}
-                        </span>
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
+                {/* 7. Submit Button */}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full py-4 px-5 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] text-white font-bold text-base shadow-lg shadow-[#C2410C]/25 flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer"
+                  >
+                    <Check className="w-5 h-5" />
+                    <span>
+                      {cart.length > 0 ? "Save & Proceed to Checkout" : "Save Location & Start Ordering"}
+                    </span>
+                  </button>
+                </div>
+              </form>
             )}
 
             {/* Bottom Center Step Indicator (Clean, non-sliding) */}

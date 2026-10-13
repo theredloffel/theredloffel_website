@@ -40,6 +40,7 @@ import {
   Utensils,
   Check,
 } from "lucide-react";
+import { getGoogleMapsDirectionsUrl } from "@/lib/googleMaps";
 
 export default function DriverPortalPage() {
   const { riders, orders, updateOrderStatus, showToast } = useKitchen();
@@ -649,10 +650,7 @@ export default function DriverPortalPage() {
               /* List of Active Orders */
               <div className="space-y-4">
                 {activeOrders.map((order) => {
-                  const hasCoordinates = Boolean(order.address?.lat && order.address?.lng);
-                  const googleMapsUrl = hasCoordinates
-                    ? `https://www.google.com/maps/dir/?api=1&destination=${order.address!.lat},${order.address!.lng}`
-                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address?.street || "Knowledge Park III, Greater Noida")}`;
+                  const googleMapsUrl = getGoogleMapsDirectionsUrl(order.address);
 
                   return (
                     <div
@@ -711,36 +709,36 @@ export default function DriverPortalPage() {
                         )}
                       </div>
 
-                      {/* Delivery Address & 1-Click Google Maps */}
-                      <div className="space-y-2">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="space-y-0.5">
-                            <span className="text-[10px] uppercase font-bold text-[#A8A29E] block">
-                              Delivery Location
+                      {/* Delivery Address & 1-Click Turn-by-Turn Google Maps (Exact Reference Design) */}
+                      <div className="p-3.5 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] space-y-2.5">
+                        <div className="text-[11px] text-[#78716C] space-y-0.5">
+                          <p className="font-semibold text-[#1C1917] flex items-center gap-1.5 text-xs">
+                            <MapPin className="w-3.5 h-3.5 text-[#C2410C] shrink-0" />
+                            <span>
+                              {order.address?.house || order.customerName || "Customer Destination"}
                             </span>
-                            <p className="text-xs sm:text-sm font-bold text-[#1C1917] leading-snug">
-                              {order.address
-                                ? `${order.address.house ? `${order.address.house}, ` : ""}${order.address.street || ""}`
-                                : "Greater Noida Delivery Point"}
+                          </p>
+                          <p className="truncate text-xs text-[#57534E]">
+                            {order.address?.street || "Knowledge Park III, Greater Noida"}
+                          </p>
+                          {order.address?.landmark && (
+                            <p className="text-[#A8A29E] text-[10px]">
+                              Landmark: {order.address.landmark}
                             </p>
-                            {order.address?.landmark && (
-                              <p className="text-xs text-[#C2410C] font-semibold">
-                                📍 Near {order.address.landmark}
-                              </p>
-                            )}
-                          </div>
-
-                          <a
-                            href={googleMapsUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="py-2.5 px-3.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-[#0284C7]/20 transition-all shrink-0 cursor-pointer"
-                            title="Open Google Maps turn-by-turn navigation to customer's pinned coordinates"
-                          >
-                            <Navigation className="w-3.5 h-3.5" />
-                            <span>Open Maps</span>
-                          </a>
+                          )}
                         </div>
+
+                        {/* Open in Google Maps Button: navigates from driver live location to customer */}
+                        <a
+                          href={googleMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-2 px-3 rounded-xl bg-white border border-[#E7E0D8] hover:border-[#1C1917] text-xs font-semibold text-[#1C1917] flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <MapPin className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Open in Google Maps</span>
+                          <ExternalLink className="w-3 h-3 text-[#A8A29E]" />
+                        </a>
                       </div>
 
                       {/* Food Items Preview */}

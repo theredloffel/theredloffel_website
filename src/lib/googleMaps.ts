@@ -309,4 +309,44 @@ export async function getCurrentGPSLocation(): Promise<{
   });
 }
 
+/**
+ * Generates a Google Maps Turn-by-Turn Navigation URL from Driver/Current Location to Customer Location.
+ * Omitting the 'origin' parameter instructs Google Maps on mobile apps and browsers to automatically
+ * use the driver's / device's live GPS position ("Your location") as the starting point, leading straight
+ * to the customer's delivery destination.
+ */
+export function getGoogleMapsDirectionsUrl(address?: {
+  lat?: number;
+  lng?: number;
+  house?: string;
+  street?: string;
+  landmark?: string;
+  address?: string;
+}): string {
+  if (!address) return "https://www.google.com/maps";
+
+  // If valid coordinates exist, route directly to the exact pin coordinates
+  if (
+    typeof address.lat === "number" &&
+    typeof address.lng === "number" &&
+    !isNaN(address.lat) &&
+    !isNaN(address.lng) &&
+    (address.lat !== 0 || address.lng !== 0)
+  ) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${address.lat},${address.lng}`;
+  }
+
+  // Fallback to human readable location string
+  const parts = [
+    address.house,
+    address.street,
+    address.landmark ? `near ${address.landmark}` : "",
+    address.address,
+    "Knowledge Park 3, Greater Noida",
+  ].filter(Boolean);
+
+  const destinationQuery = parts.join(", ") || "Knowledge Park 3, Greater Noida";
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destinationQuery)}`;
+}
+
 

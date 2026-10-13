@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { useKitchen } from "@/context/KitchenContext";
 import { OrderStatus } from "@/types";
-import { X, Clock, CheckCircle2, Bike, ChefHat, Package, CheckCheck, Bell, ChevronRight, Sparkles, Phone, XCircle } from "lucide-react";
+import { X, Clock, CheckCircle2, Bike, ChefHat, Package, CheckCheck, Bell, ChevronRight, Sparkles, Phone, XCircle, MapPin, ExternalLink } from "lucide-react";
+import { getGoogleMapsDirectionsUrl } from "@/lib/googleMaps";
 
 const STEPS: { status: OrderStatus; label: string; icon: React.ReactNode }[] = [
   { status: "Order Received", label: "Order Received", icon: <Clock className="w-4 h-4" /> },
@@ -413,6 +414,37 @@ export function OrderHistoryModal() {
                           <span>Call Rider</span>
                         </a>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Delivery Destination & Google Maps Directions Card (Exact Reference Design) */}
+                  {order.orderType === "Delivery" && order.address && (
+                    <div className="p-3.5 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] space-y-2">
+                      <div className="text-[11px] text-[#78716C] space-y-0.5">
+                        <p className="font-semibold text-[#1C1917] flex items-center gap-1.5 text-xs">
+                          <MapPin className="w-3.5 h-3.5 text-[#C2410C] shrink-0" />
+                          <span>{order.address.house || "Delivery Address"}</span>
+                        </p>
+                        <p className="truncate text-xs text-[#57534E]">
+                          {order.address.street}
+                        </p>
+                        {order.address.landmark && (
+                          <p className="text-[#A8A29E] text-[10px]">
+                            Landmark: {order.address.landmark}
+                          </p>
+                        )}
+                      </div>
+
+                      <a
+                        href={getGoogleMapsDirectionsUrl(order.address)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2 px-3 rounded-xl bg-white border border-[#E7E0D8] hover:border-[#1C1917] text-xs font-semibold text-[#1C1917] flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                      >
+                        <MapPin className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Open in Google Maps</span>
+                        <ExternalLink className="w-3 h-3 text-[#A8A29E]" />
+                      </a>
                     </div>
                   )}
 

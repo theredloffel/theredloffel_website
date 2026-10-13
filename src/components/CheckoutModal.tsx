@@ -14,9 +14,11 @@ import {
   Building,
   Edit3,
   ChevronDown,
+  ExternalLink,
 } from "lucide-react";
 import { AddAddressFlowModal } from "@/components/AddAddressFlowModal";
 import { SavedLocation } from "@/types";
+import { getGoogleMapsDirectionsUrl } from "@/lib/googleMaps";
 
 export function CheckoutModal() {
   const {
@@ -379,89 +381,92 @@ export function CheckoutModal() {
             )}
 
             {/* Active Selected Address Details Card */}
+            {/* Active Selected Address Details Card (Exact Reference Design) */}
             {activeStreet ? (
-              <div className="p-4 rounded-2xl bg-white border border-[#E7E0D8] shadow-xs relative overflow-hidden space-y-2.5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-[#FED7AA]/50 text-[#C2410C] flex items-center justify-center shrink-0">
-                      {getTagIcon(activeLocation?.label || "HOME")}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-extrabold uppercase px-2 py-0.5 rounded-md bg-[#FED7AA]/50 text-[#9A3412]">
-                          {activeLocation?.label || "HOME"}
-                        </span>
-                        <span className="text-[11px] text-[#78716C] font-semibold">
-                          Delivering to this address
-                        </span>
-                      </div>
-                      <p className="text-sm font-bold text-[#1C1917] mt-1">
-                        {activeHouse}
+              <div className="p-3.5 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] space-y-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="text-[11px] text-[#78716C] min-w-0">
+                    <p className="font-semibold text-[#1C1917] flex items-center gap-1.5 text-xs">
+                      <MapPin className="w-3.5 h-3.5 text-[#C2410C] shrink-0" />
+                      <span className="truncate">{activeHouse || "Delivery Destination"}</span>
+                    </p>
+                    <p className="truncate text-xs text-[#57534E] mt-0.5">
+                      {activeStreet}
+                    </p>
+                    {activeLandmark && (
+                      <p className="text-[#A8A29E] text-[10px] mt-0.5">
+                        Landmark: {activeLandmark}
                       </p>
-                      <p className="text-xs text-[#57534E] leading-relaxed">
-                        {activeStreet}
-                      </p>
-                      {activeLandmark && (
-                        <p className="text-xs text-[#C2410C] font-semibold mt-0.5">
-                          📍 Near {activeLandmark}
-                        </p>
-                      )}
-                    </div>
+                    )}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsAddAddressFlowOpen(true)}
-                    className="text-xs text-[#C2410C] font-bold hover:underline shrink-0 cursor-pointer flex items-center gap-1"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Change Pin</span>
-                  </button>
-                </div>
-
-                {/* Optional toggle to tweak flat / landmark */}
-                <div className="pt-1">
-                  {!isEditingDetails ? (
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-md bg-white border border-[#E7E0D8] text-[#9A3412]">
+                      {activeLocation?.label || "HOME"}
+                    </span>
                     <button
                       type="button"
                       onClick={() => {
                         setCustomHouse(activeHouse);
                         setCustomLandmark(activeLandmark);
-                        setIsEditingDetails(true);
+                        setIsEditingDetails((prev) => !prev);
                       }}
-                      className="text-[11px] text-[#78716C] hover:text-[#1C1917] font-semibold underline cursor-pointer"
+                      className="text-xs text-[#C2410C] font-bold hover:underline cursor-pointer flex items-center gap-1"
+                      title="Edit address notes"
                     >
-                      + Add extra landmark or floor note
+                      <Edit3 className="w-3 h-3" />
+                      <span>Edit</span>
                     </button>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#E7E0D8]/60">
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1917] mb-1">
-                          House / Flat / Floor
-                        </label>
-                        <input
-                          type="text"
-                          value={customHouse}
-                          onChange={(e) => setCustomHouse(e.target.value)}
-                          placeholder="e.g. Flat 301, Tower B"
-                          className="w-full px-3 py-2 rounded-xl border border-[#E7E0D8] bg-[#FAF8F5] text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-semibold text-[#1C1917] mb-1">
-                          Landmark Instructions
-                        </label>
-                        <input
-                          type="text"
-                          value={customLandmark}
-                          onChange={(e) => setCustomLandmark(e.target.value)}
-                          placeholder="e.g. Near Gate 1"
-                          className="w-full px-3 py-2 rounded-xl border border-[#E7E0D8] bg-[#FAF8F5] text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
-                        />
-                      </div>
-                    </div>
-                  )}
+                  </div>
                 </div>
+
+                {/* Clickable Google Maps Action Button (Directions from driver to customer) */}
+                <a
+                  href={getGoogleMapsDirectionsUrl({
+                    lat: activeLocation?.lat,
+                    lng: activeLocation?.lng,
+                    house: activeHouse,
+                    street: activeStreet,
+                    landmark: activeLandmark,
+                  })}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2 px-3 rounded-xl bg-white border border-[#E7E0D8] hover:border-[#1C1917] text-xs font-semibold text-[#1C1917] flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-rose-600" />
+                  <span>Open in Google Maps</span>
+                  <ExternalLink className="w-3 h-3 text-[#A8A29E]" />
+                </a>
+
+                {/* Optional toggle to tweak flat / landmark */}
+                {isEditingDetails && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2.5 border-t border-[#E7E0D8]/60">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1C1917] mb-1">
+                        House / Flat / Floor
+                      </label>
+                      <input
+                        type="text"
+                        value={customHouse}
+                        onChange={(e) => setCustomHouse(e.target.value)}
+                        placeholder="e.g. Room 204"
+                        className="w-full px-3 py-2 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] font-medium focus:border-[#C2410C] focus:outline-hidden"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-[#1C1917] mb-1">
+                        Landmark / Note
+                      </label>
+                      <input
+                        type="text"
+                        value={customLandmark}
+                        onChange={(e) => setCustomLandmark(e.target.value)}
+                        placeholder="e.g. Near gate 2"
+                        className="w-full px-3 py-2 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] font-medium focus:border-[#C2410C] focus:outline-hidden"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               /* No Address Saved Yet State */

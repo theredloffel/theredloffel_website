@@ -25,6 +25,7 @@ import {
   Copy,
 } from "lucide-react";
 import { OrderActionConfirmModal, OrderConfirmActionType } from "./OrderActionConfirmModal";
+import { getGoogleMapsDirectionsUrl } from "@/lib/googleMaps";
 
 export type BoardFilter = "All" | "New Order" | "Confirmed Order" | "In Road";
 
@@ -302,7 +303,7 @@ export function LiveOrdersBoard() {
   const renderOrderCard = (order: Order, queueIdx?: number) => {
     const wa = getWhatsAppBadge(order);
     const googleMapsUrl = order.address
-      ? `https://www.google.com/maps/dir/?api=1&destination=${order.address.lat},${order.address.lng}`
+      ? getGoogleMapsDirectionsUrl(order.address)
       : undefined;
 
     const isNew = order.status === "Order Received" || order.status === "Pending";
