@@ -807,7 +807,7 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       const cleanPhone = ((targetOrder as Order).customerPhone || "").replace(/\D/g, "");
       if (cleanPhone) {
         if (newStatus === "Order Accepted" || newStatus === "Preparing") {
-          fetch("/api/whatsapp/send-notification", {
+          fetch("/api/notifications/send", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -817,7 +817,7 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
             }),
           }).catch((e) => console.error("Notification alert for confirmed order failed:", e));
         } else if (newStatus === "Rejected") {
-          fetch("/api/whatsapp/send-notification", {
+          fetch("/api/notifications/send", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -900,7 +900,7 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     // 1. Notify Customer: "Your order is out for delivery - Order ID: #[id] - Amount: ₹[amount]"
     const cleanCustomerPhone = (order.customerPhone || "").replace(/\D/g, "");
     if (cleanCustomerPhone) {
-      fetch("/api/whatsapp/send-notification", {
+      fetch("/api/notifications/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -911,13 +911,13 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
           riderName: rider?.name,
           riderPhone: rider?.phone,
         }),
-      }).catch((e) => console.error("WhatsApp dispatch alert to customer failed:", e));
+      }).catch((e) => console.error("Dispatch alert to customer failed:", e));
     }
 
     // 2. Notify Driver: "Pending delivery - Location: [location] - Order No: #[id] - Name: [name] - Amount: ₹[amount]"
     const cleanRiderPhone = (rider?.phone || "").replace(/\D/g, "");
     if (cleanRiderPhone) {
-      fetch("/api/whatsapp/send-notification", {
+      fetch("/api/notifications/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -928,7 +928,7 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
           location: deliveryAddress,
           amount: order.total,
         }),
-      }).catch((e) => console.error("WhatsApp dispatch alert to driver failed:", e));
+      }).catch((e) => console.error("Dispatch alert to driver failed:", e));
     }
 
     setOrders((prev) =>
@@ -942,16 +942,11 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
           : o
       )
     );
-    showToast(`Dispatch alerts sent to customer and ${riderName}!`, "success");
+    showToast(`Dispatch notifications sent: Customer & Driver ${riderName} alerted for Order #${orderId}!`, "success");
   };
 
   const retryWhatsApp = (orderId: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId ? { ...o, whatsAppNotificationStatus: "Delivered" } : o
-      )
-    );
-    showToast(`WhatsApp message re-sent for order #${orderId}!`, "success");
+    sendRiderWhatsApp(orderId);
   };
 
   // Menu items manager

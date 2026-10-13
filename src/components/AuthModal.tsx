@@ -73,9 +73,6 @@ export function AuthModal() {
   const [phoneError, setPhoneError] = useState("");
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const [fallbackOtp, setFallbackOtp] = useState<string | null>(null);
-  const [currentDomain, setCurrentDomain] = useState<string>("");
-  const [isDomainMismatch, setIsDomainMismatch] = useState(false);
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
   // Profile Sub-views (Your account, orders, addresses, etc.)
@@ -137,15 +134,11 @@ export function AuthModal() {
 
     // Attempt real Google SMS OTP via Firebase
     if (typeof window !== "undefined") {
-      const hostname = window.location.hostname;
-      setCurrentDomain(hostname);
-      setIsDomainMismatch(false);
-
       try {
         if ((window as any).recaptchaVerifier) {
           try {
             (window as any).recaptchaVerifier.clear();
-          } catch {}
+          } catch { }
           (window as any).recaptchaVerifier = null;
         }
 
@@ -160,7 +153,6 @@ export function AuthModal() {
           appVerifier
         );
         setConfirmationResult(confirmation);
-        setFallbackOtp(null);
         setStep("otp");
         setTimer(30);
         showToast(`Verification code sent to +91 ${cleanPhone}`, "success");
@@ -172,29 +164,9 @@ export function AuthModal() {
         try {
           (window as any).recaptchaVerifier?.clear();
           (window as any).recaptchaVerifier = null;
-        } catch {}
+        } catch { }
 
-        // Fallback code when domain isn't yet whitelisted in Firebase Authorized domains
-        const generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-        setFallbackOtp(generatedCode);
-        setConfirmationResult(null);
-        setStep("otp");
-        setTimer(30);
-
-        const isDomainError =
-          err?.message?.includes("Hostname match not found") ||
-          err?.message?.includes("captcha-check-failed") ||
-          err?.code === "auth/captcha-check-failed";
-
-        if (isDomainError) {
-          setIsDomainMismatch(true);
-          showToast(
-            `Notice: Domain "${hostname}" not in Firebase. Generated code: ${generatedCode}`,
-            "info"
-          );
-        } else {
-          showToast(`Verification code: ${generatedCode}`, "info");
-        }
+        showToast(err?.message || "Firebase verification failed. Check console for details.", "warning");
         return;
       }
     }
@@ -222,11 +194,7 @@ export function AuthModal() {
   };
 
   const handleAutoFillDemoOtp = () => {
-    if (fallbackOtp) {
-      setOtpDigits(fallbackOtp.split(""));
-    } else {
-      setOtpDigits(["", "", "", "", "", ""]);
-    }
+    setOtpDigits(["", "", "", "", "", ""]);
   };
 
   const handleVerifyOtp = async () => {
@@ -238,26 +206,19 @@ export function AuthModal() {
 
     setIsVerifying(true);
 
-    if (confirmationResult) {
-      try {
-        // 100% Verified directly by Firebase servers
-        const credential = await confirmationResult.confirm(code);
-        console.log("Firebase user authenticated successfully:", credential.user.phoneNumber);
-      } catch (err: any) {
-        setIsVerifying(false);
-        showToast("Incorrect code! Firebase rejected this OTP.", "warning");
-        return;
-      }
-    } else if (fallbackOtp) {
-      // Verified against session fallback code when domain is unwhitelisted
-      if (code !== fallbackOtp) {
-        setIsVerifying(false);
-        showToast("Incorrect code! Please enter the 6-digit code shown above.", "warning");
-        return;
-      }
-    } else {
+    if (!confirmationResult) {
       setIsVerifying(false);
       showToast("No active Firebase session. Please request OTP again.", "warning");
+      return;
+    }
+
+    try {
+      // 100% Verified directly by Firebase servers
+      const credential = await confirmationResult.confirm(code);
+      console.log("Firebase user authenticated successfully:", credential.user.phoneNumber);
+    } catch (err: any) {
+      setIsVerifying(false);
+      showToast("Incorrect code! Firebase rejected this OTP.", "warning");
       return;
     }
 
@@ -270,7 +231,6 @@ export function AuthModal() {
         setIsAuthOpen(false);
         setStep("phone");
         setOtpDigits(["", "", "", "", "", ""]);
-        setFallbackOtp(null);
         showToast(`Welcome back! Signed in with +91 ${phone}`, "success");
 
         if (cart.length > 0) {
@@ -412,8 +372,6 @@ export function AuthModal() {
     setStep("phone");
     setStep3View("map");
     setOtpDigits(["", "", "", "", "", ""]);
-    setFallbackOtp(null);
-    setIsDomainMismatch(false);
   };
 
   if (isAddAddressFlowOpen) {
@@ -544,7 +502,7 @@ export function AuthModal() {
                               text: "Order gourmet bowls & burgers from The Red Löffel!",
                               url: window.location.origin,
                             })
-                            .catch(() => {});
+                            .catch(() => { });
                         } else {
                           navigator.clipboard?.writeText(window.location.origin);
                           showToast("The Red Löffel link copied to clipboard!", "success");
@@ -823,11 +781,10 @@ export function AuthModal() {
                               setLocationAddress(loc.address);
                               showToast(`Delivery address set to ${loc.label}`, "success");
                             }}
-                            className={`p-4 rounded-2xl bg-white border transition-all cursor-pointer relative shadow-2xs ${
-                              isSelected
+                            className={`p-4 rounded-2xl bg-white border transition-all cursor-pointer relative shadow-2xs ${isSelected
                                 ? "border-emerald-500 ring-2 ring-emerald-500/15"
                                 : "border-[#E7E0D8] hover:border-[#1C1917]"
-                            }`}
+                              }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div className="flex items-start gap-3">
@@ -938,7 +895,7 @@ export function AuthModal() {
                     <div>
                       <h4 className="font-bold text-sm text-[#1C1917]">Order Status Alerts</h4>
                       <p className="text-xs text-[#78716C]">
-                        Receive real-time order updates via SMS & WhatsApp
+                        Receive real-time cooking and delivery updates
                       </p>
                     </div>
                     <input
@@ -955,9 +912,9 @@ export function AuthModal() {
                   </div>
                   <div className="p-4 flex items-center justify-between">
                     <div>
-                      <h4 className="font-bold text-sm text-[#1C1917]">WhatsApp Receipts</h4>
+                      <h4 className="font-bold text-sm text-[#1C1917]">Digital Receipts</h4>
                       <p className="text-xs text-[#78716C]">
-                        Get digital bills and rider tracking links on WhatsApp
+                        Get digital bills and driver tracking alerts
                       </p>
                     </div>
                     <input
@@ -1101,41 +1058,6 @@ export function AuthModal() {
             {/* -------------------------------------------------------- */}
             {step === "otp" && (
               <div className="space-y-4">
-                {/* Fallback Banner if Domain Mismatch or Fallback active */}
-                {fallbackOtp && (
-                  <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                        <ShieldCheck className="w-4 h-4 text-amber-600" />
-                        <span>Customer Verification Code</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOtpDigits(fallbackOtp.split(""));
-                          showToast("Code filled in!", "info");
-                        }}
-                        className="text-[11px] font-bold text-[#C2410C] hover:underline flex items-center gap-1 cursor-pointer"
-                      >
-                        Auto-Fill
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-amber-200">
-                      <span className="text-xs text-amber-800 font-medium">Your One-Time Code:</span>
-                      <span className="font-mono text-base font-extrabold tracking-widest text-[#C2410C]">
-                        {fallbackOtp}
-                      </span>
-                    </div>
-
-                    {isDomainMismatch && currentDomain && (
-                      <p className="text-[11px] text-amber-800 leading-snug">
-                        <strong>Notice:</strong> Domain <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-[10px]">{currentDomain}</code> is not in Firebase Authorized Domains yet. You can sign in using this code or add this domain in Firebase Console.
-                      </p>
-                    )}
-                  </div>
-                )}
-
                 <div className="flex items-center justify-between gap-1.5 sm:gap-2.5">
                   {otpDigits.map((digit, i) => (
                     <input
@@ -1155,7 +1077,7 @@ export function AuthModal() {
 
                 <div className="flex items-center justify-between text-xs pt-1">
                   <span className="text-[#78716C]">
-                    {fallbackOtp ? "Enter code shown above" : "Enter the code sent to your phone"}
+                    Enter the code from Firebase Console
                   </span>
 
                   {timer > 0 ? (
@@ -1371,11 +1293,10 @@ export function AuthModal() {
                             key={tag}
                             type="button"
                             onClick={() => setLocationTag(tag as any)}
-                            className={`py-2 px-1.5 rounded-xl text-xs font-extrabold flex flex-col items-center gap-1 border transition-all ${
-                              locationTag === tag
+                            className={`py-2 px-1.5 rounded-xl text-xs font-extrabold flex flex-col items-center gap-1 border transition-all ${locationTag === tag
                                 ? "bg-[#C2410C] text-white border-[#C2410C] shadow-md shadow-[#C2410C]/25"
                                 : "bg-white text-[#78716C] border-[#E7E0D8] hover:border-[#1C1917]"
-                            }`}
+                              }`}
                           >
                             {icon}
                             <span className="text-[10px]">{tag}</span>
@@ -1405,20 +1326,17 @@ export function AuthModal() {
             <div className="mt-6 pt-3.5 border-t border-[#E7E0D8]/80 flex items-center justify-center gap-2.5 text-center">
               <div className="flex items-center gap-1.5">
                 <span
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    step === "phone" ? "bg-[#C2410C] ring-4 ring-[#FED7AA]" : "bg-[#D6D3D1]"
-                  }`}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${step === "phone" ? "bg-[#C2410C] ring-4 ring-[#FED7AA]" : "bg-[#D6D3D1]"
+                    }`}
                 />
                 <span
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    step === "otp" ? "bg-[#C2410C] ring-4 ring-[#FED7AA]" : "bg-[#D6D3D1]"
-                  }`}
+                  className={`w-2.5 h-2.5 rounded-full transition-all ${step === "otp" ? "bg-[#C2410C] ring-4 ring-[#FED7AA]" : "bg-[#D6D3D1]"
+                    }`}
                 />
                 {!isExistingUser && (
                   <span
-                    className={`w-2.5 h-2.5 rounded-full transition-all ${
-                      step === "location" ? "bg-[#C2410C] ring-4 ring-[#FED7AA]" : "bg-[#D6D3D1]"
-                    }`}
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${step === "location" ? "bg-[#C2410C] ring-4 ring-[#FED7AA]" : "bg-[#D6D3D1]"
+                      }`}
                   />
                 )}
               </div>

@@ -626,14 +626,12 @@ export function AdminSettings({
                         <span className="text-[#78716C] font-mono">{rider.phone}</span>
                         <div className="flex items-center gap-2">
                           <a
-                            href={`https://wa.me/${rider.phone.replace(/[^0-9]/g, "")}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1"
-                            title="Chat on WhatsApp"
+                            href={`tel:${rider.phone.replace(/[^0-9+]/g, "")}`}
+                            className="text-[#C2410C] hover:underline font-semibold flex items-center gap-1"
+                            title="Call Driver"
                           >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            <span>WhatsApp</span>
+                            <Phone className="w-3.5 h-3.5" />
+                            <span>Call Driver</span>
                           </a>
                           <button
                             type="button"
@@ -831,9 +829,9 @@ export function AdminSettings({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                 <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E7E0D8] space-y-1">
-                  <span className="font-bold text-[#1C1917] block">WhatsApp Rider Dispatch</span>
+                  <span className="font-bold text-[#1C1917] block">Driver Dispatch Alerts</span>
                   <p className="text-[#78716C]">
-                    Automatically generates Google Maps route navigation and order details for assigned riders.
+                    Automatically dispatches order details and delivery location navigation to assigned drivers.
                   </p>
                   <span className="text-emerald-700 font-semibold text-[11px] block pt-1">
                     ✓ Always Enabled

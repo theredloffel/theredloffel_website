@@ -1090,7 +1090,7 @@ export function ProfileView() {
                 <div>
                   <h4 className="font-bold text-sm text-[#1C1917]">Order Status Alerts</h4>
                   <p className="text-xs text-[#78716C]">
-                    Receive real-time order updates via SMS & WhatsApp
+                    Receive real-time cooking and delivery updates
                   </p>
                 </div>
                 <input
@@ -1108,9 +1108,9 @@ export function ProfileView() {
 
               <div className="p-4 flex items-center justify-between">
                 <div>
-                  <h4 className="font-bold text-sm text-[#1C1917]">WhatsApp Receipts</h4>
+                  <h4 className="font-bold text-sm text-[#1C1917]">Digital Receipts</h4>
                   <p className="text-xs text-[#78716C]">
-                    Get digital bills and rider tracking links on WhatsApp
+                    Get digital bills and driver tracking alerts
                   </p>
                 </div>
                 <input

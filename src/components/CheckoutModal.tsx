@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useKitchen } from "@/context/KitchenContext";
-import { X, MapPin, Navigation, CheckCircle2, MessageSquare, CreditCard, Banknote, ShieldAlert, Sparkles, ArrowRight, Plus } from "lucide-react";
+import { X, MapPin, Navigation, CheckCircle2, Bell, CreditCard, Banknote, ShieldAlert, Sparkles, ArrowRight, Plus } from "lucide-react";
 import { AddAddressFlowModal } from "@/components/AddAddressFlowModal";
 
 export function CheckoutModal() {
@@ -123,7 +123,7 @@ export function CheckoutModal() {
       return;
     }
     if (!customerPhone.trim() || customerPhone.replace(/\D/g, "").length < 10) {
-      showToast("Please provide a valid 10-digit WhatsApp number", "warning");
+      showToast("Please provide a valid 10-digit mobile number", "warning");
       return;
     }
     if (!house.trim() || !street.trim()) {
@@ -153,27 +153,19 @@ export function CheckoutModal() {
 
     placeOrder(orderData);
 
-    // Send Real WhatsApp Order Confirmation Receipt
+    // Dispatch Order Confirmation Notification
     if (whatsAppConsent) {
-      fetch("/api/whatsapp/send-receipt", {
+      fetch("/api/notifications/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           phone: cleanPhone,
-          order: {
-            orderId: `TRL-${Math.floor(1000 + Math.random() * 9000)}`,
-            customerName: customerName.trim(),
-            items: cart.map((i) => ({
-              name: i.item.name,
-              quantity: i.quantity,
-              price: i.item.price,
-            })),
-            totalAmount: grandTotal,
-            deliveryAddress: `${house.trim()}, ${street.trim()}${landmark.trim() ? `, near ${landmark.trim()}` : ""}`,
-            deliveryEta: "25-35 mins",
-          },
+          orderId: `TRL-${Math.floor(1000 + Math.random() * 9000)}`,
+          type: "CONFIRMED_PREPARING",
+          customerName: customerName.trim(),
+          amount: grandTotal,
         }),
-      }).catch((e) => console.error("WhatsApp receipt send failed:", e));
+      }).catch((e) => console.error("Notification send failed:", e));
     }
 
     setIsSubmitting(false);
@@ -230,7 +222,7 @@ export function CheckoutModal() {
 
               <div>
                 <label className="block text-xs font-semibold text-[#1C1917] mb-1">
-                  WhatsApp Contact Number *
+                  Contact Mobile Number *
                 </label>
                 <div className="relative flex">
                   <span className="inline-flex items-center px-3 rounded-l-xl border border-r-0 border-[#E7E0D8] bg-[#F5EFEB] text-[#1C1917] text-xs font-semibold">
@@ -331,7 +323,7 @@ export function CheckoutModal() {
               </div>
             )}
 
-            {/* WhatsApp Consent Checkbox */}
+            {/* Notification Consent Checkbox */}
             <label className="flex items-start gap-3 p-3 rounded-xl bg-white border border-[#E7E0D8] cursor-pointer hover:border-[#C2410C] transition-colors">
               <input
                 type="checkbox"
@@ -341,11 +333,11 @@ export function CheckoutModal() {
               />
               <div className="text-xs">
                 <span className="font-semibold text-[#1C1917] flex items-center gap-1.5">
-                  <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                  WhatsApp Order Updates
+                  <Bell className="w-3.5 h-3.5 text-[#C2410C]" />
+                  Order & Delivery Notifications
                 </span>
                 <p className="text-[#78716C] mt-0.5">
-                  I agree to receive live cooking and delivery status alerts via WhatsApp.
+                  I agree to receive live cooking and delivery status alerts.
                 </p>
               </div>
             </label>

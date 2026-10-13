@@ -15,7 +15,7 @@ import { FloatingMenuCartWidget } from "@/components/FloatingMenuCartWidget";
 import {
   ShieldCheck,
   MapPin,
-  MessageSquare,
+  Phone,
 } from "lucide-react";
 
 export function Storefront() {
@@ -98,8 +98,8 @@ export function Storefront() {
                   <span>Knowledge Park III, Near Sharda University, Greater Noida - 201310</span>
                 </p>
                 <p className="flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>WhatsApp Concierge: +91 62976 73521</span>
+                  <Phone className="w-4 h-4 text-[#C2410C] shrink-0" />
+                  <span>Kitchen Helpline: +91 62976 73521</span>
                 </p>
               </div>
             </div>

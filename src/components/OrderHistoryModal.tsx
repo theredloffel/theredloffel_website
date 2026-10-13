@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useKitchen } from "@/context/KitchenContext";
 import { OrderStatus } from "@/types";
-import { X, Clock, CheckCircle2, Bike, ChefHat, Package, CheckCheck, MessageSquare, ChevronRight, Sparkles, Phone, XCircle } from "lucide-react";
+import { X, Clock, CheckCircle2, Bike, ChefHat, Package, CheckCheck, Bell, ChevronRight, Sparkles, Phone, XCircle } from "lucide-react";
 
 const STEPS: { status: OrderStatus; label: string; icon: React.ReactNode }[] = [
   { status: "Order Received", label: "Order Received", icon: <Clock className="w-4 h-4" /> },
@@ -132,8 +132,8 @@ export function OrderHistoryModal() {
               <p className="text-xs text-[#78716C]">
                 {singleOrder
                   ? singleOrder.status === "Rejected"
-                    ? `Order rejected due to ${singleOrder.rejectionReason || "out of stock"} • For any help, please convey on WhatsApp`
-                    : `Current Status: ${singleOrder.status} • For any help, please convey on WhatsApp`
+                    ? `Order rejected due to ${singleOrder.rejectionReason || "out of stock"} • Helpline: +91 62976 73521`
+                    : `Current Status: ${singleOrder.status} • Helpline: +91 62976 73521`
                   : "Completed orders and dispatch history from The Red Löffel Kitchen"}
               </p>
             </div>
@@ -238,11 +238,11 @@ export function OrderHistoryModal() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      {/* WhatsApp status badge */}
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium">
-                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Updates on {order.customerPhone}</span>
-                        <span className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-200/60 px-1.5 py-0.2 rounded-sm ml-1">
+                      {/* Live notification status badge */}
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-[#C2410C] text-xs font-medium">
+                        <Bell className="w-3.5 h-3.5 text-[#C2410C]" />
+                        <span>Alerts on {order.customerPhone}</span>
+                        <span className="text-[10px] uppercase font-bold text-[#C2410C] bg-orange-200/60 px-1.5 py-0.2 rounded-sm ml-1">
                           {order.whatsAppNotificationStatus}
                         </span>
                       </div>
@@ -310,7 +310,7 @@ export function OrderHistoryModal() {
                             The kitchen could not fulfill your order due to {order.rejectionReason || "out of stock"}. This is the final status and the order has been archived to your order history.
                           </p>
                           <p className="text-[11px] font-medium text-rose-600 pt-0.5">
-                            For any help, please convey on WhatsApp.
+                            For any help, please call customer helpline: +91 62976 73521.
                           </p>
                         </div>
                       </div>
@@ -442,17 +442,17 @@ export function OrderHistoryModal() {
                     )}
                   </div>
 
-                  {/* WhatsApp Support & Help Notice */}
-                  <div className="p-3.5 rounded-2xl bg-emerald-50/90 border border-emerald-200 flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <MessageSquare className="w-4 h-4" />
+                  {/* Support & Help Notice */}
+                  <div className="p-3.5 rounded-2xl bg-[#FFF7ED] border border-[#FDBA74] flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#C2410C] text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Phone className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-emerald-950">
+                      <p className="text-xs font-bold text-[#9A3412]">
                         Need any help with your order?
                       </p>
-                      <p className="text-[11px] text-emerald-700">
-                        For any help, please convey on WhatsApp. We are live and ready to assist you!
+                      <p className="text-[11px] text-[#C2410C]">
+                        Call our kitchen helpline at +91 62976 73521. We are live and ready to assist you!
                       </p>
                     </div>
                   </div>

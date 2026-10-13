@@ -5,7 +5,6 @@ import { useKitchen } from "@/context/KitchenContext";
 import { Order, OrderStatus } from "@/types";
 import {
   MapPin,
-  MessageSquare,
   Bike,
   User,
   Phone,
@@ -22,9 +21,10 @@ import {
   X,
   XCircle,
   Filter,
+  Bell,
+  Copy,
 } from "lucide-react";
 import { OrderActionConfirmModal, OrderConfirmActionType } from "./OrderActionConfirmModal";
-import { getWhatsAppClickToChatUrl } from "@/lib/whatsapp";
 
 export type BoardFilter = "All" | "New Order" | "Confirmed Order" | "In Road";
 
@@ -270,7 +270,7 @@ export function LiveOrdersBoard() {
         return {
           color: "bg-blue-50 text-blue-700 border-blue-200",
           icon: <Send className="w-3 h-3" />,
-          label: "Sent",
+          label: "Dispatched",
         };
       case "Delivered":
         return {
@@ -282,7 +282,7 @@ export function LiveOrdersBoard() {
         return {
           color: "bg-cyan-50 text-cyan-800 border-cyan-200",
           icon: <CheckCircle2 className="w-3 h-3" />,
-          label: "Read",
+          label: "Acknowledged",
         };
       case "Failed":
         return {
@@ -292,8 +292,8 @@ export function LiveOrdersBoard() {
         };
       default:
         return {
-          color: "bg-gray-50 text-gray-700 border-gray-200",
-          icon: <MessageSquare className="w-3 h-3" />,
+          color: "bg-orange-50 text-[#C2410C] border-orange-200",
+          icon: <Bell className="w-3 h-3" />,
           label: status,
         };
     }
@@ -631,11 +631,11 @@ export function LiveOrdersBoard() {
                 <span>Mark as Delivered</span>
               </button>
 
-              {/* WhatsApp Rider Action & Status Log Indicator */}
+              {/* Notification Dispatch & Status Log Indicator */}
               <div className="pt-1 flex items-center justify-between gap-2">
                 <div
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${wa.color}`}
-                  title="WhatsApp notification dispatch status"
+                  title="Notification dispatch status"
                 >
                   {wa.icon}
                   <span>{wa.label}</span>
@@ -643,7 +643,7 @@ export function LiveOrdersBoard() {
                     <button
                       onClick={() => retryWhatsApp(order.id)}
                       className="ml-1 text-[10px] underline hover:text-black flex items-center gap-0.5"
-                      title="Retry sending WhatsApp"
+                      title="Retry notification"
                     >
                       <RotateCcw className="w-2.5 h-2.5" /> Retry
                     </button>
@@ -656,11 +656,11 @@ export function LiveOrdersBoard() {
                     sendRiderWhatsApp(order.id);
                     setWhatsAppPreviewOrder(order);
                   }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors shrink-0 cursor-pointer"
-                  title="Share Task to Rider via WhatsApp"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#C2410C] hover:bg-[#9A3412] text-white text-xs font-semibold shadow-2xs transition-colors shrink-0 cursor-pointer"
+                  title="Dispatch Notification to Driver & Customer"
                 >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span>Share Task to Rider</span>
+                  <Bell className="w-3.5 h-3.5" />
+                  <span>Dispatch Alert</span>
                 </button>
               </div>
             </div>
@@ -883,15 +883,15 @@ export function LiveOrdersBoard() {
             <div className="bg-[#FAF8F5] rounded-3xl border border-[#E7E0D8] max-w-lg w-full p-6 shadow-2xl space-y-4 overscroll-contain">
               <div className="flex items-center justify-between border-b border-[#E7E0D8] pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center">
-                    <MessageSquare className="w-4 h-4" />
+                  <div className="w-8 h-8 rounded-full bg-[#C2410C] text-white flex items-center justify-center">
+                    <Bell className="w-4 h-4" />
                   </div>
                   <div>
                     <h4 className="font-serif text-base font-bold text-[#1C1917]">
-                      Order #{whatsAppPreviewOrder.id} Dispatch Alerts
+                      Order #{whatsAppPreviewOrder.id} Dispatch Notification
                     </h4>
                     <p className="text-[10px] text-[#78716C]">
-                      Rider: {assignedRider?.name || "Assigned Driver"} ({riderPhone || "No Phone"})
+                      Driver: {assignedRider?.name || "Assigned Driver"} ({riderPhone || "No Phone"})
                     </p>
                   </div>
                 </div>
@@ -908,20 +908,19 @@ export function LiveOrdersBoard() {
                 <div className="flex items-center justify-between text-xs font-bold text-[#1C1917]">
                   <span className="flex items-center gap-1.5">
                     <Bike className="w-3.5 h-3.5 text-[#C2410C]" />
-                    <span>Message to Driver:</span>
+                    <span>Notification to Driver:</span>
                   </span>
                   {riderPhone && (
-                    <button
-                      type="button"
-                      onClick={() => window.open(getWhatsAppClickToChatUrl(riderPhone, driverTaskMsg), "_blank")}
-                      className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold underline flex items-center gap-1 cursor-pointer"
+                    <a
+                      href={`sms:${riderPhone.replace(/\D/g, "")}`}
+                      className="text-[11px] text-[#C2410C] hover:underline font-bold flex items-center gap-1"
                     >
                       <ExternalLink className="w-3 h-3" />
-                      <span>Send to Driver on WhatsApp</span>
-                    </button>
+                      <span>Send SMS to Driver</span>
+                    </a>
                   )}
                 </div>
-                <div className="bg-[#075E54] text-white p-3.5 rounded-2xl text-xs font-mono leading-relaxed">
+                <div className="bg-[#1C1917] text-[#FAF8F5] p-3.5 rounded-2xl text-xs font-mono leading-relaxed border border-[#44403C]">
                   {driverTaskMsg}
                 </div>
               </div>
@@ -931,25 +930,19 @@ export function LiveOrdersBoard() {
                 <div className="flex items-center justify-between text-xs font-bold text-[#1C1917]">
                   <span className="flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-[#C2410C]" />
-                    <span>Message to Customer:</span>
+                    <span>Notification to Customer:</span>
                   </span>
                   {whatsAppPreviewOrder.customerPhone && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        window.open(
-                          getWhatsAppClickToChatUrl(whatsAppPreviewOrder.customerPhone, customerAlertMsg),
-                          "_blank"
-                        )
-                      }
-                      className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold underline flex items-center gap-1 cursor-pointer"
+                    <a
+                      href={`sms:${whatsAppPreviewOrder.customerPhone.replace(/\D/g, "")}`}
+                      className="text-[11px] text-[#C2410C] hover:underline font-bold flex items-center gap-1"
                     >
                       <ExternalLink className="w-3 h-3" />
-                      <span>Send to Customer on WhatsApp</span>
-                    </button>
+                      <span>Send SMS to Customer</span>
+                    </a>
                   )}
                 </div>
-                <div className="bg-[#128C7E] text-white p-3.5 rounded-2xl text-xs font-mono leading-relaxed">
+                <div className="bg-[#292524] text-[#FAF8F5] p-3.5 rounded-2xl text-xs font-mono leading-relaxed border border-[#44403C]">
                   {customerAlertMsg}
                 </div>
               </div>
@@ -962,17 +955,17 @@ export function LiveOrdersBoard() {
                     sendRiderWhatsApp(whatsAppPreviewOrder.id);
                     setWhatsAppPreviewOrder(null);
                   }}
-                  className="py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="py-3 px-3 rounded-xl bg-[#C2410C] hover:bg-[#9A3412] text-white text-xs font-bold shadow-md transition-all active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>Send Automated Alerts</span>
+                  <span>Re-dispatch Alert</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setWhatsAppPreviewOrder(null)}
                   className="py-3 px-3 rounded-xl bg-[#FAF8F5] hover:bg-[#F5EFEB] border border-[#E7E0D8] text-[#1C1917] text-xs font-bold transition-colors cursor-pointer"
                 >
-                  Close
+                  Done
                 </button>
               </div>
             </div>
