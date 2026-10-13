@@ -17,30 +17,31 @@ export async function POST(req: Request) {
     const generatedOtp =
       otp || Math.floor(100000 + Math.random() * 900000).toString();
 
-    const result = await sendWhatsAppOTP(phone, generatedOtp);
+    let result: { success: boolean; messageId?: string; error?: string } = {
+      success: false,
+    };
 
-    if (!result.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: result.error,
-          // Return simulated fallback in dev if token is not yet configured
-          isSimulated: !process.env.WHATSAPP_ACCESS_TOKEN,
-          otp: generatedOtp,
-        },
-        { status: result.error?.includes("not configured") ? 200 : 500 }
-      );
+    try {
+      result = await sendWhatsAppOTP(phone, generatedOtp);
+    } catch (err: any) {
+      result = { success: false, error: err?.message || "WhatsApp service error" };
     }
 
+    // Always return generated OTP with status 200 so driver verification flow continues
     return NextResponse.json({
-      success: true,
+      success: result.success,
       messageId: result.messageId,
+      error: result.error,
       otp: generatedOtp,
     });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message || "Failed to process request" },
-      { status: 500 }
+      {
+        success: false,
+        error: error.message || "Failed to process request",
+        otp: Math.floor(100000 + Math.random() * 900000).toString(),
+      },
+      { status: 200 }
     );
   }
 }

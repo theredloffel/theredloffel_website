@@ -3,12 +3,17 @@
 import React, { useState } from "react";
 import { useKitchen } from "@/context/KitchenContext";
 import {
+  auth,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  ConfirmationResult,
+} from "@/lib/firebase";
+import {
   X,
   Bike,
   User,
   Phone,
   ShieldCheck,
-  Send,
   Loader2,
   CheckCircle2,
   AlertCircle,
@@ -29,10 +34,10 @@ export function AddDriverModal({ isOpen, onClose }: AddDriverModalProps) {
   const [phone, setPhone] = useState("");
   const [vehicle, setVehicle] = useState("");
 
-  // Verification state
+  // Firebase Phone Auth Verification State
   const [step, setStep] = useState<"details" | "otp">("details");
   const [otpInput, setOtpInput] = useState("");
-  const [expectedOtp, setExpectedOtp] = useState<string | null>(null);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -42,7 +47,7 @@ export function AddDriverModal({ isOpen, onClose }: AddDriverModalProps) {
 
   const cleanPhone = phone.replace(/\D/g, "");
 
-  // Step 1: Send OTP to Driver
+  // STEP 1: Send SMS OTP to Driver via Firebase Phone Auth
   const handleSendOtp = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMessage("");
@@ -52,90 +57,112 @@ export function AddDriverModal({ isOpen, onClose }: AddDriverModalProps) {
       return;
     }
 
-    if (cleanPhone.length < 10) {
+    if (cleanPhone.length !== 10) {
       setErrorMessage("Please enter a valid 10-digit mobile number.");
       return;
     }
 
     setIsSendingOtp(true);
-    try {
-      const res = await fetch("/api/whatsapp/send-otp", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: cleanPhone.slice(-10) }),
-      });
 
-      const data = await res.json();
-      if (!res.ok && !data.otp) {
-        throw new Error(data.error || "Failed to send verification code");
-      }
+    if (typeof window !== "undefined") {
+      try {
+        if ((window as any).driverRecaptchaVerifier) {
+          try {
+            (window as any).driverRecaptchaVerifier.clear();
+          } catch {}
+          (window as any).driverRecaptchaVerifier = null;
+        }
 
-      const generatedCode = data.otp || Math.floor(100000 + Math.random() * 900000).toString();
-      setExpectedOtp(generatedCode);
-      setStep("otp");
-      setResendCooldown(30);
-
-      // Start countdown
-      const interval = setInterval(() => {
-        setResendCooldown((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            return 0;
-          }
-          return prev - 1;
+        const appVerifier = new RecaptchaVerifier(auth, "driver-recaptcha-container", {
+          size: "invisible",
         });
-      }, 1000);
+        (window as any).driverRecaptchaVerifier = appVerifier;
 
-      showToast(`Verification OTP sent to +91 ${cleanPhone.slice(-10)}`, "info");
-    } catch (err: any) {
-      console.error("Send driver OTP error:", err);
-      // Fallback for immediate admin onboarding
-      const fallbackOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      setExpectedOtp(fallbackOtp);
-      setStep("otp");
-      showToast(`Verification code generated: ${fallbackOtp}`, "info");
-    } finally {
-      setIsSendingOtp(false);
+        const confirmation = await signInWithPhoneNumber(
+          auth,
+          `+91${cleanPhone}`,
+          appVerifier
+        );
+
+        setConfirmationResult(confirmation);
+        setStep("otp");
+        setResendCooldown(30);
+
+        const interval = setInterval(() => {
+          setResendCooldown((prev) => {
+            if (prev <= 1) {
+              clearInterval(interval);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        showToast(`Firebase SMS OTP sent to +91 ${cleanPhone}`, "success");
+      } catch (err: any) {
+        console.error("Firebase SMS error for driver:", err);
+        setErrorMessage(
+          err?.message || "Failed to send SMS OTP via Firebase. Please check the mobile number."
+        );
+        try {
+          (window as any).driverRecaptchaVerifier?.clear();
+          (window as any).driverRecaptchaVerifier = null;
+        } catch {}
+      } finally {
+        setIsSendingOtp(false);
+      }
     }
   };
 
-  // Step 2: Verify OTP and Register Driver
-  const handleVerifyOtp = (e: React.FormEvent) => {
+  // STEP 2: Verify SMS OTP via Firebase and Register Driver
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
 
-    if (!otpInput.trim() || otpInput.trim().length !== 6) {
-      setErrorMessage("Please enter the complete 6-digit verification code.");
+    const code = otpInput.trim();
+    if (code.length !== 6) {
+      setErrorMessage("Please enter the complete 6-digit verification code received via SMS.");
+      return;
+    }
+
+    if (!confirmationResult) {
+      setErrorMessage("No active Firebase verification session. Please request OTP again.");
       return;
     }
 
     setIsVerifying(true);
-    setTimeout(() => {
-      // Validate OTP match
-      if (expectedOtp && otpInput.trim() !== expectedOtp.trim()) {
-        setErrorMessage("Invalid OTP code. Please check and try again.");
-        setIsVerifying(false);
-        return;
-      }
+    try {
+      // 100% Verified directly by Firebase Google Auth
+      await confirmationResult.confirm(code);
 
       // Add to fleet via KitchenContext
       addRider({
         name: name.trim(),
-        phone: cleanPhone.slice(-10),
+        phone: cleanPhone,
         vehicle: vehicle.trim() || "Motorcycle / Scooter",
       });
 
-      setIsVerifying(false);
       handleClose();
-    }, 400);
+    } catch (err: any) {
+      console.error("Firebase OTP confirmation error:", err);
+      setErrorMessage(
+        err?.message || "Invalid OTP code. Please enter the correct code received on the driver's phone."
+      );
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const handleClose = () => {
+    try {
+      (window as any).driverRecaptchaVerifier?.clear();
+      (window as any).driverRecaptchaVerifier = null;
+    } catch {}
     setName("");
     setPhone("");
     setVehicle("");
     setOtpInput("");
-    setExpectedOtp(null);
+    setConfirmationResult(null);
     setStep("details");
     setErrorMessage("");
     onClose();
@@ -161,8 +188,8 @@ export function AddDriverModal({ isOpen, onClose }: AddDriverModalProps) {
               </h3>
               <p className="text-xs text-[#78716C]">
                 {step === "details"
-                  ? "Register a new rider to your delivery fleet"
-                  : `Enter the 6-digit code sent to +91 ${cleanPhone.slice(-10)}`}
+                  ? "Register a new driver using Firebase SMS verification"
+                  : `Enter the SMS code sent by Firebase to +91 ${cleanPhone}`}
               </p>
             </div>
           </div>
@@ -179,7 +206,7 @@ export function AddDriverModal({ isOpen, onClose }: AddDriverModalProps) {
         {errorMessage && (
           <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>{errorMessage}</span>
+            <span className="leading-relaxed">{errorMessage}</span>
           </div>
         )}
 
@@ -224,7 +251,7 @@ export function AddDriverModal({ isOpen, onClose }: AddDriverModalProps) {
                 <Phone className="w-4 h-4 text-[#78716C] absolute right-3 pointer-events-none" />
               </div>
               <p className="text-[11px] text-[#78716C] mt-1">
-                A 6-digit OTP verification code will be sent to this phone number.
+                A 6-digit SMS OTP will be sent to the driver via Firebase.
               </p>
             </div>
 
@@ -260,12 +287,12 @@ export function AddDriverModal({ isOpen, onClose }: AddDriverModalProps) {
                 {isSendingOtp ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Sending Code...</span>
+                    <span>Sending SMS...</span>
                   </>
                 ) : (
                   <>
                     <ShieldCheck className="w-4 h-4" />
-                    <span>Send OTP to Driver</span>
+                    <span>Send SMS OTP to Driver</span>
                   </>
                 )}
               </button>
@@ -273,27 +300,22 @@ export function AddDriverModal({ isOpen, onClose }: AddDriverModalProps) {
           </form>
         )}
 
-        {/* STEP 2: OTP VERIFICATION FORM */}
+        {/* STEP 2: FIREBASE SMS OTP VERIFICATION FORM */}
         {step === "otp" && (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-1">
-              <div className="flex items-center gap-2 text-xs font-bold">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Verification code sent!</span>
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-1">
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Firebase SMS sent!</span>
               </div>
-              <p className="text-[11px] text-emerald-800">
-                Driver: <strong>{name}</strong> (+91 {cleanPhone.slice(-10)})
+              <p className="text-[11px] text-emerald-900 leading-relaxed">
+                SMS verification code has been dispatched to <strong>{name}</strong> (+91 {cleanPhone}).
               </p>
-              {expectedOtp && (
-                <div className="pt-1 text-[11px] text-emerald-700 font-mono">
-                  Quick verification code: <span className="font-bold underline">{expectedOtp}</span>
-                </div>
-              )}
             </div>
 
             <div>
               <label className="block text-xs font-bold text-[#1C1917] mb-1.5">
-                Enter 6-Digit OTP Code
+                Enter 6-Digit SMS OTP
               </label>
               <div className="relative">
                 <input
@@ -327,7 +349,7 @@ export function AddDriverModal({ isOpen, onClose }: AddDriverModalProps) {
                   className="text-[#C2410C] hover:underline font-bold flex items-center gap-1"
                 >
                   <RotateCcw className="w-3 h-3" />
-                  <span>Resend Code</span>
+                  <span>Resend SMS OTP</span>
                 </button>
               )}
             </div>
@@ -360,6 +382,9 @@ export function AddDriverModal({ isOpen, onClose }: AddDriverModalProps) {
             </div>
           </form>
         )}
+
+        {/* Invisible permanent reCAPTCHA anchor for Firebase */}
+        <div id="driver-recaptcha-container"></div>
       </div>
     </div>
   );
