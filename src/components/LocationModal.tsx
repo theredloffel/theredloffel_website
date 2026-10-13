@@ -14,8 +14,6 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import { AddAddressFlowModal } from "@/components/AddAddressFlowModal";
-
 export function LocationModal() {
   const {
     isLocationModalOpen,
@@ -36,22 +34,8 @@ export function LocationModal() {
   const [customAddress, setCustomAddress] = useState("");
   const [customLabel, setCustomLabel] = useState<"HOME" | "WORK" | "HOSTEL" | "OTHER">("OTHER");
   const [isDetecting, setIsDetecting] = useState(false);
-  const [isAddAddressFlowOpen, setIsAddAddressFlowOpen] = useState(false);
 
   if (!isLocationModalOpen) return null;
-
-  if (isAddAddressFlowOpen) {
-    return (
-      <AddAddressFlowModal
-        isOpen={true}
-        onClose={() => setIsAddAddressFlowOpen(false)}
-        onSuccess={() => {
-          setIsAddAddressFlowOpen(false);
-          setIsLocationModalOpen(false);
-        }}
-      />
-    );
-  }
 
   const handleSelectLocation = (label: string, address: string) => {
     setLocationLabel(label);
@@ -67,7 +51,8 @@ export function LocationModal() {
       showToast("Please log in to set or view delivery locations", "info");
       return;
     }
-    setIsAddAddressFlowOpen(true);
+    setIsLocationModalOpen(false);
+    openMapPicker();
   };
 
   const handleSaveCustom = (e: React.FormEvent) => {
@@ -240,14 +225,16 @@ export function LocationModal() {
               if (!user.isLoggedIn) {
                 setIsLocationModalOpen(false);
                 setIsAuthOpen(true);
+                showToast("Please log in to add delivery address", "info");
               } else {
-                setIsAddAddressFlowOpen(true);
+                setIsLocationModalOpen(false);
+                openMapPicker();
               }
             }}
-            className="w-full py-3.5 px-4 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-[#C2410C]/25 transition-all active:scale-98"
+            className="w-full py-3.5 px-4 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-[#C2410C]/25 transition-all active:scale-98 cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Add New Address (Select on Map)</span>
+            <span>Add New Address (Pin on Map)</span>
           </button>
         </div>
 

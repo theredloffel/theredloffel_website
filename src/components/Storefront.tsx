@@ -11,6 +11,7 @@ import { AuthModal } from "@/components/AuthModal";
 import { CheckoutModal } from "@/components/CheckoutModal";
 import { OrderHistoryModal } from "@/components/OrderHistoryModal";
 import { LocationModal } from "@/components/LocationModal";
+import { MapLocationPickerModal } from "@/components/MapLocationPickerModal";
 import { FloatingMenuCartWidget } from "@/components/FloatingMenuCartWidget";
 import {
   MapPin,
@@ -43,6 +44,7 @@ export function Storefront() {
       <CheckoutModal />
       <OrderHistoryModal />
       <LocationModal />
+      <MapLocationPickerModal />
 
       {/* Footer */}
       <footer className="mt-20 border-t border-[#E7E0D8] bg-[#1C1917] text-[#FAF8F5]">
@@ -68,9 +70,6 @@ export function Storefront() {
                 Cloud kitchen operating in Knowledge Park 3, Greater Noida. Dedicated to
                 fresh gourmet burgers, bowls, sides, and zero-compromise packaging.
               </p>
-              <div className="text-[11px] text-[#78716C]">
-                FSSAI Lic. No: 11224334001928 • Compliant Gourmet Facility
-              </div>
             </div>
 
             {/* Col 2: Service & Dispatch */}

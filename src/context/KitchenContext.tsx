@@ -92,8 +92,8 @@ interface KitchenContextType {
   setIsLocationModalOpen: (open: boolean) => void;
   isMapPickerOpen: boolean;
   setIsMapPickerOpen: (open: boolean) => void;
-  openMapPicker: (callback?: (loc: { label: string; address: string; detail?: string }) => void) => void;
-  mapPickerCallback: ((loc: { label: string; address: string; detail?: string }) => void) | null;
+  openMapPicker: (callback?: (loc: { label: string; address: string; detail?: string; house?: string; street?: string; landmark?: string; lat?: number; lng?: number; accuracy?: number }) => void) => void;
+  mapPickerCallback: ((loc: { label: string; address: string; detail?: string; house?: string; street?: string; landmark?: string; lat?: number; lng?: number; accuracy?: number }) => void) | null;
 
   // Search & Dietary Quick Filters (Synced with Nav Bar)
   searchQuery: string;
@@ -175,9 +175,9 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isMapPickerOpen, setIsMapPickerOpen] = useState(false);
-  const [mapPickerCallback, setMapPickerCallback] = useState<((loc: { label: string; address: string; detail?: string }) => void) | null>(null);
+  const [mapPickerCallback, setMapPickerCallback] = useState<((loc: { label: string; address: string; detail?: string; house?: string; street?: string; landmark?: string; lat?: number; lng?: number; accuracy?: number }) => void) | null>(null);
 
-  const openMapPicker = (callback?: (loc: { label: string; address: string; detail?: string }) => void) => {
+  const openMapPicker = (callback?: (loc: { label: string; address: string; detail?: string; house?: string; street?: string; landmark?: string; lat?: number; lng?: number; accuracy?: number }) => void) => {
     setMapPickerCallback(() => callback || null);
     setIsMapPickerOpen(true);
   };
@@ -218,6 +218,12 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       let currentUserPhone = "";
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
+        if (parsed.name === "Gourmet Member") {
+          parsed.name = "";
+          try {
+            localStorage.setItem("lebistro_user", JSON.stringify(parsed));
+          } catch {}
+        }
         setUser(parsed);
         if (parsed.isLoggedIn && parsed.phone) {
           currentUserPhone = parsed.phone.replace(/\D/g, "");
@@ -1179,8 +1185,12 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         }
       : user.defaultAddress;
 
+    const resolvedName =
+      (name && name !== "Gourmet Member" ? name.trim() : "") ||
+      (user.name && user.name !== "Gourmet Member" ? user.name.trim() : "");
+
     const loggedInUser: UserProfile = {
-      name: name || user.name || "Gourmet Member",
+      name: resolvedName,
       phone: phone,
       isLoggedIn: true,
       defaultAddress: defaultAddr,

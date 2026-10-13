@@ -31,8 +31,8 @@ import {
   Sparkles,
   RotateCcw,
 } from "lucide-react";
-import { AddAddressFlowModal } from "@/components/AddAddressFlowModal";
 import { isRegisteredUser, registerUserPhone } from "@/lib/auth";
+import { MapLocationPickerModal } from "@/components/MapLocationPickerModal";
 
 type ProfileTab = "main" | "orders" | "addresses" | "about" | "notifications" | "add-address";
 
@@ -53,6 +53,7 @@ export function ProfileView() {
     savedLocations,
     addSavedLocation,
     removeSavedLocation,
+    openMapPicker,
     setIsAuthOpen,
     showToast,
   } = useKitchen();
@@ -60,7 +61,6 @@ export function ProfileView() {
   const [activeTab, setActiveTab] = useState<ProfileTab>("main");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showShareBanner, setShowShareBanner] = useState(true);
-  const [isAddAddressModalOpen, setIsAddAddressModalOpen] = useState(false);
   const [notifPreferences, setNotifPreferences] = useState({
     orderUpdates: true,
     whatsapp: true,
@@ -568,28 +568,22 @@ export function ProfileView() {
               <h1 className="font-bold text-xl text-[#1C1917]">My addresses</h1>
             </div>
 
-            {/* + Add new address Card (Opens First Map, then details!) */}
+            {/* + Add new address Card (Opens Map with draggable pin, then details!) */}
             <button
               type="button"
-              onClick={() => setIsAddAddressModalOpen(true)}
-              className="w-full p-4 rounded-2xl bg-white border border-[#E7E0D8] hover:border-emerald-600 flex items-center justify-between shadow-2xs group transition-all text-left"
+              onClick={() => openMapPicker()}
+              className="w-full p-4 rounded-2xl bg-white border border-[#E7E0D8] hover:border-emerald-600 flex items-center justify-between shadow-2xs group transition-all text-left cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                   <Plus className="w-4 h-4 stroke-[3]" />
                 </div>
                 <span className="font-bold text-sm text-emerald-700 group-hover:text-emerald-800 transition-colors">
-                  Add new address
+                  Add new address (Pin on Map)
                 </span>
               </div>
               <ChevronRight className="w-5 h-5 text-[#A8A29E]" />
             </button>
-
-            {/* First Map -> Then Additional Details -> Then Add Modal */}
-            <AddAddressFlowModal
-              isOpen={isAddAddressModalOpen}
-              onClose={() => setIsAddAddressModalOpen(false)}
-            />
 
             <div className="pt-1">
               <span className="text-xs font-bold text-[#78716C] uppercase tracking-wider block mb-2 px-1">
@@ -1149,6 +1143,8 @@ export function ProfileView() {
           </div>
         )}
       </div>
+
+      <MapLocationPickerModal />
     </div>
   );
 }

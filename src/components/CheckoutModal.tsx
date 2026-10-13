@@ -16,7 +16,6 @@ import {
   ChevronDown,
   ExternalLink,
 } from "lucide-react";
-import { AddAddressFlowModal } from "@/components/AddAddressFlowModal";
 import { SavedLocation } from "@/types";
 import { getGoogleMapsDirectionsUrl } from "@/lib/googleMaps";
 
@@ -39,6 +38,8 @@ export function CheckoutModal() {
     placeOrder,
     showToast,
     setIsAuthOpen,
+    openMapPicker,
+    loginWithPhone,
   } = useKitchen();
 
   // Redirect to login if unauthenticated
@@ -50,7 +51,9 @@ export function CheckoutModal() {
     }
   }, [isCheckoutOpen, user.isLoggedIn, setIsCheckoutOpen, setIsAuthOpen, showToast]);
 
-  const [customerName, setCustomerName] = useState(user.name || "");
+  const [customerName, setCustomerName] = useState(
+    user.name && user.name.toLowerCase() !== "gourmet member" ? user.name : ""
+  );
   const [customerPhone, setCustomerPhone] = useState(user.phone || "");
 
   // Active / Selected Saved Location ID
@@ -68,13 +71,24 @@ export function CheckoutModal() {
     accuracy: 10,
   });
 
-  const [isAddAddressFlowOpen, setIsAddAddressFlowOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleOpenMapPicker = () => {
+    openMapPicker((loc) => {
+      if (loc.lat && loc.lng) {
+        setPinnedCoords({ lat: loc.lat, lng: loc.lng, accuracy: 10 });
+      }
+      if (loc.house || loc.detail) setCustomHouse(loc.house || loc.detail || "");
+      if (loc.landmark) setCustomLandmark(loc.landmark);
+    });
+  };
 
   // Synchronize customer profile & auto-select saved location
   useEffect(() => {
     if (user.phone) setCustomerPhone(user.phone);
-    if (user.name) setCustomerName(user.name);
+    if (user.name && user.name.toLowerCase() !== "gourmet member") {
+      setCustomerName(user.name);
+    }
   }, [user.phone, user.name]);
 
   // Determine active saved location
@@ -107,23 +121,6 @@ export function CheckoutModal() {
   }, [savedLocations, locationAddress, selectedLocationId, user.defaultAddress]);
 
   if (!isCheckoutOpen) return null;
-
-  if (isAddAddressFlowOpen) {
-    return (
-      <AddAddressFlowModal
-        isOpen={true}
-        onClose={() => setIsAddAddressFlowOpen(false)}
-        onSuccess={(loc) => {
-          if (loc.lat && loc.lng) {
-            setPinnedCoords({ lat: loc.lat, lng: loc.lng, accuracy: 10 });
-          }
-          if (loc.house) setCustomHouse(loc.house);
-          if (loc.landmark) setCustomLandmark(loc.landmark);
-          setIsAddAddressFlowOpen(false);
-        }}
-      />
-    );
-  }
 
   // Active location object
   const activeLocation: SavedLocation | undefined =
@@ -191,8 +188,9 @@ export function CheckoutModal() {
   const handleSubmitOrder = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!customerName.trim()) {
-      showToast("Please provide your name", "warning");
+    const trimmedName = customerName.trim();
+    if (!trimmedName || trimmedName.toLowerCase() === "gourmet member") {
+      showToast("Please enter your Full Name before confirming order", "warning");
       return;
     }
     if (!customerPhone.trim() || customerPhone.replace(/\D/g, "").length < 10) {
@@ -209,8 +207,11 @@ export function CheckoutModal() {
     const fullPhone = customerPhone.startsWith("+91") ? customerPhone : `+91 ${customerPhone}`;
     const cleanPhone = customerPhone.replace(/\D/g, "");
 
+    // Persist real customer name into profile
+    loginWithPhone(customerPhone, trimmedName);
+
     const orderData = {
-      customerName: customerName.trim(),
+      customerName: trimmedName,
       customerPhone: fullPhone,
       address: {
         house: activeHouse.trim(),
@@ -282,15 +283,15 @@ export function CheckoutModal() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-[#1C1917] mb-1">
-                  Full Name *
+                  Full Name <span className="text-red-500 font-bold">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="e.g. Aditya Roy"
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
+                  placeholder="Enter your full name (Mandatory)"
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] font-medium focus:border-[#C2410C] focus:outline-hidden"
                 />
               </div>
 
@@ -325,11 +326,11 @@ export function CheckoutModal() {
 
               <button
                 type="button"
-                onClick={() => setIsAddAddressFlowOpen(true)}
+                onClick={handleOpenMapPicker}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FED7AA]/60 text-[#9A3412] hover:bg-[#FED7AA] text-xs font-bold transition-all cursor-pointer shrink-0"
               >
                 <Plus className="w-3.5 h-3.5 text-[#C2410C]" />
-                <span>Add Location</span>
+                <span>Add Address</span>
               </button>
             </div>
 
@@ -339,43 +340,32 @@ export function CheckoutModal() {
                 <label className="block text-xs font-semibold text-[#1C1917]">
                   Select Saved Address
                 </label>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <select
-                      value={activeLocation?.id || ""}
-                      onChange={(e) => {
-                        if (e.target.value === "__ADD_NEW__") {
-                          setIsAddAddressFlowOpen(true);
-                          return;
-                        }
-                        const found = savedLocations.find((l) => l.id === e.target.value);
-                        if (found) handleSelectLocation(found);
-                      }}
-                      className="w-full appearance-none pl-10 pr-9 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs font-bold text-[#1C1917] focus:border-[#C2410C] focus:ring-1 focus:ring-[#C2410C]/20 focus:outline-hidden cursor-pointer shadow-2xs"
-                    >
-                      {savedLocations.map((loc) => (
-                        <option key={loc.id} value={loc.id}>
-                          {loc.label}: {loc.house ? `${loc.house}, ` : ""}{loc.street || loc.address}
-                        </option>
-                      ))}
-                      <option value="__ADD_NEW__">+ Add New Address...</option>
-                    </select>
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#C2410C]">
-                      <MapPin className="w-4 h-4" />
-                    </div>
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#78716C]">
-                      <ChevronDown className="w-4 h-4" />
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsAddAddressFlowOpen(true)}
-                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#FED7AA]/60 hover:bg-[#FED7AA] text-[#9A3412] text-xs font-bold transition-all shrink-0 cursor-pointer shadow-2xs"
+                <div className="relative">
+                  <select
+                    value={activeLocation?.id || ""}
+                    onChange={(e) => {
+                      if (e.target.value === "__ADD_NEW__") {
+                        handleOpenMapPicker();
+                        return;
+                      }
+                      const found = savedLocations.find((l) => l.id === e.target.value);
+                      if (found) handleSelectLocation(found);
+                    }}
+                    className="w-full appearance-none pl-10 pr-9 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs font-bold text-[#1C1917] focus:border-[#C2410C] focus:ring-1 focus:ring-[#C2410C]/20 focus:outline-hidden cursor-pointer shadow-2xs"
                   >
-                    <Plus className="w-4 h-4 text-[#C2410C]" />
-                    <span>Add New</span>
-                  </button>
+                    {savedLocations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.label}: {loc.house ? `${loc.house}, ` : ""}{loc.street || loc.address}
+                      </option>
+                    ))}
+                    <option value="__ADD_NEW__">+ Add New Address...</option>
+                  </select>
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#C2410C]">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#78716C]">
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
                 </div>
               </div>
             )}
@@ -482,10 +472,10 @@ export function CheckoutModal() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsAddAddressFlowOpen(true)}
+                  onClick={handleOpenMapPicker}
                   className="px-4 py-2.5 rounded-xl bg-[#C2410C] text-white text-xs font-bold hover:bg-[#9A3412] inline-flex items-center gap-1.5 transition-all shadow-md shadow-[#C2410C]/20 cursor-pointer"
                 >
-                  <Plus className="w-4 h-4" />
+                  <MapPin className="w-4 h-4" />
                   <span>Pin Delivery Location on Map</span>
                 </button>
               </div>

@@ -41,7 +41,7 @@ export function MapLocationPickerModal() {
   const [currentAddress, setCurrentAddress] = useState(DEFAULT_MAP_CENTER.address);
 
   // Details form inputs (when clicking "Add more address details")
-  const [formAddress, setFormAddress] = useState(DEFAULT_MAP_CENTER.address);
+  const [formAddress, setFormAddress] = useState("");
   const [formFlat, setFormFlat] = useState("");
   const [formTag, setFormTag] = useState<"HOME" | "WORK" | "HOSTEL" | "OTHER">("HOME");
 
@@ -53,32 +53,44 @@ export function MapLocationPickerModal() {
     setCurrentLocality(geocoded.locality || "Knowledge Park III");
     setCurrentCity(geocoded.city || "Greater Noida");
     setCurrentAddress(geocoded.formattedAddress);
-    setFormAddress(geocoded.formattedAddress);
   };
 
   // Step 2: Proceed to "Add more address details"
   const handleProceedToDetails = () => {
-    setFormAddress(currentAddress);
     setViewMode("details");
   };
 
   // Final Save handler
   const handleSaveFinalAddress = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formAddress.trim()) return;
+    const entered = formAddress.trim();
+    if (!entered) {
+      showToast("Please enter your delivery address / building / street", "warning");
+      return;
+    }
+
+    const fullAddress = entered.includes(currentLocality)
+      ? entered
+      : `${entered}, ${currentLocality}, ${currentCity}`;
 
     const locData = {
       label: formTag,
-      address: formAddress.trim(),
+      address: fullAddress,
       detail: formFlat.trim() || undefined,
+      house: formFlat.trim() || entered,
+      street: entered,
+      landmark: formFlat.trim() ? `Near ${formFlat.trim()}` : undefined,
+      lat: currentCoords.lat,
+      lng: currentCoords.lng,
+      accuracy: 10,
     };
 
     // 1. Add to context saved locations and activate
     addSavedLocation(locData);
     setLocationLabel(formTag);
-    setLocationAddress(formAddress.trim());
+    setLocationAddress(fullAddress);
 
-    // 2. Invoke callback if modal was opened by AuthModal or other caller
+    // 2. Invoke callback if modal was opened by AuthModal, CheckoutModal or other caller
     if (mapPickerCallback) {
       mapPickerCallback(locData);
     }
@@ -86,16 +98,20 @@ export function MapLocationPickerModal() {
     // 3. Close modal & reset view
     setIsMapPickerOpen(false);
     setViewMode("map");
-    showToast(`Delivery location pinned and saved to ${formTag}!`, "success");
+    setFormAddress("");
+    setFormFlat("");
+    showToast(`Delivery location saved to ${formTag}!`, "success");
   };
 
   const handleClose = () => {
     setIsMapPickerOpen(false);
     setViewMode("map");
+    setFormAddress("");
+    setFormFlat("");
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs overscroll-contain animate-in fade-in duration-200 p-0 sm:p-4">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-xs overscroll-contain animate-in fade-in duration-200 p-0 sm:p-4">
       <div className="relative w-full h-full sm:h-[88vh] sm:max-w-md sm:rounded-3xl bg-white shadow-2xl flex flex-col overflow-hidden overscroll-contain">
         {/* ======================================================== */}
         {/* TOP BAR: Back Arrow + "Add address"                      */}
@@ -215,7 +231,7 @@ export function MapLocationPickerModal() {
                     required
                     value={formAddress}
                     onChange={(e) => setFormAddress(e.target.value)}
-                    placeholder="Complete delivery address, building, or street"
+                    placeholder="Enter house/flat no., building name, or street"
                     className="w-full px-4 py-3 pl-11 rounded-2xl border border-[#E7E0D8] bg-white text-xs sm:text-sm text-[#1C1917] font-semibold placeholder:text-[#94A3B8] focus:outline-hidden focus:border-[#00875A] focus:ring-2 focus:ring-[#00875A]/20 transition-all"
                   />
                   <MapPin className="w-4 h-4 text-[#00875A] absolute left-3.5 top-3.5" />

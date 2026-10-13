@@ -32,7 +32,6 @@ import {
   Pin,
   ExternalLink,
 } from "lucide-react";
-import { AddAddressFlowModal } from "@/components/AddAddressFlowModal";
 import { isRegisteredUser, registerUserPhone } from "@/lib/auth";
 import {
   DEFAULT_MAP_CENTER,
@@ -59,6 +58,7 @@ export function AuthModal() {
     addSavedLocation,
     removeSavedLocation,
     setIsLocationModalOpen,
+    openMapPicker,
     showToast,
     cart,
     cartCount,
@@ -82,7 +82,6 @@ export function AuthModal() {
   const [profileView, setProfileView] = useState<ProfileViewType>("main");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showShareBanner, setShowShareBanner] = useState(true);
-  const [isAddAddressFlowOpen, setIsAddAddressFlowOpen] = useState(false);
   const [notifPreferences, setNotifPreferences] = useState({
     orderUpdates: true,
     whatsapp: true,
@@ -375,15 +374,6 @@ export function AuthModal() {
     setStep("phone");
     setOtpDigits(["", "", "", "", "", ""]);
   };
-
-  if (isAddAddressFlowOpen) {
-    return (
-      <AddAddressFlowModal
-        isOpen={true}
-        onClose={() => setIsAddAddressFlowOpen(false)}
-      />
-    );
-  }
 
   return (
     <div
@@ -743,15 +733,15 @@ export function AuthModal() {
                 {/* + Add new address Card (First Map -> Then Additional Details -> Then Add) */}
                 <button
                   type="button"
-                  onClick={() => setIsAddAddressFlowOpen(true)}
-                  className="w-full p-4 rounded-2xl bg-white border border-[#E7E0D8] hover:border-emerald-600 flex items-center justify-between shadow-2xs group transition-all text-left"
+                  onClick={() => openMapPicker()}
+                  className="w-full p-4 rounded-2xl bg-white border border-[#E7E0D8] hover:border-emerald-600 flex items-center justify-between shadow-2xs group transition-all text-left cursor-pointer"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                       <Plus className="w-4 h-4 stroke-[3]" />
                     </div>
                     <span className="font-bold text-sm text-emerald-700 group-hover:text-emerald-800 transition-colors">
-                      Add new address
+                      Add new address (Pin on Map)
                     </span>
                   </div>
                   <ChevronRight className="w-5 h-5 text-[#A8A29E]" />

@@ -146,14 +146,6 @@ export function AdminLogin({ onLoginSuccess }: AdminLoginProps) {
               )}
             </button>
           </form>
-
-          {/* Quick Notice / Default Info */}
-          <div className="pt-4 border-t border-[#292524] text-center">
-            <div className="inline-flex items-center gap-1.5 text-[11px] text-[#78716C] bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
-              <Lock className="w-3 h-3 text-[#FED7AA]" />
-              <span>Default password: <span className="font-mono text-[#FED7AA] font-bold">admin123</span> (editable in Settings)</span>
-            </div>
-          </div>
         </div>
       </div>
 
