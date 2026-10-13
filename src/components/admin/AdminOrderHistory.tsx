@@ -398,12 +398,13 @@ export function AdminOrderHistory() {
                         <div className="flex items-center justify-between lg:justify-end gap-6 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-[#F5EFEB]">
                           {/* Rider Info if assigned */}
                           {assignedRider && (
-                            <div className="text-left lg:text-right hidden sm:block">
+                            <div className="text-left lg:text-right">
                               <span className="text-[10px] uppercase font-bold tracking-wider text-[#A8A29E] block">
                                 Rider Assigned
                               </span>
-                              <span className="text-xs font-semibold text-[#1C1917]">
-                                {assignedRider.name}
+                              <span className="text-xs font-semibold text-[#1C1917] flex items-center lg:justify-end gap-1 mt-0.5">
+                                <Bike className="w-3.5 h-3.5 text-[#C2410C]" />
+                                <span>{assignedRider.name}</span>
                               </span>
                             </div>
                           )}

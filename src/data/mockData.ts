@@ -499,7 +499,16 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
   },
 ];
 
-export const RIDERS: Rider[] = [];
+export const RIDERS: Rider[] = [
+  {
+    id: "driver-1",
+    name: "Parikshit Singh",
+    phone: "9625750927",
+    vehicle: "Bike • Express Dispatch",
+    rating: 5.0,
+    activeOrders: 0,
+  },
+];
 
 export const INITIAL_ORDERS: Order[] = [];
 

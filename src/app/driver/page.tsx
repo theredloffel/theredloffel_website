@@ -149,9 +149,21 @@ export default function DriverPortalPage() {
     }
 
     // Verify if this phone number is registered in fleet
-    const matchedRider = riders.find(
+    let matchedRider = riders.find(
       (r) => r.phone.replace(/\D/g, "").slice(-10) === cleanEnteredPhone
     );
+
+    // Auto-resolve for kitchen manager & fleet partner numbers
+    if (!matchedRider && (cleanEnteredPhone === "9625750927" || cleanEnteredPhone === "6297673521")) {
+      matchedRider = {
+        id: `driver-${cleanEnteredPhone}`,
+        name: cleanEnteredPhone === "9625750927" ? "Parikshit Singh" : "Fleet Lead",
+        phone: cleanEnteredPhone,
+        vehicle: "Express Delivery Bike",
+        rating: 5.0,
+        activeOrders: 0,
+      };
+    }
 
     if (!matchedRider) {
       setAuthError(
@@ -219,9 +231,20 @@ export default function DriverPortalPage() {
       await confirmationResult.confirm(code);
 
       // Match rider
-      const matchedRider = riders.find(
+      let matchedRider = riders.find(
         (r) => r.phone.replace(/\D/g, "").slice(-10) === cleanEnteredPhone
       );
+
+      if (!matchedRider) {
+        matchedRider = {
+          id: `driver-${cleanEnteredPhone}`,
+          name: cleanEnteredPhone === "9625750927" ? "Parikshit Singh" : "Fleet Driver",
+          phone: `+91 ${cleanEnteredPhone}`,
+          vehicle: "Express Delivery Bike",
+          rating: 5.0,
+          activeOrders: 0,
+        };
+      }
 
       if (matchedRider) {
         setLoggedDriver(matchedRider);

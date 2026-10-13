@@ -389,7 +389,7 @@ export function OrderHistoryModal() {
                   )}
 
                   {/* Rider / Delivery Card if Out for Delivery or Assigned */}
-                  {order.orderType === "Delivery" && assignedRider && order.status !== "Rejected" && (
+                  {order.orderType === "Delivery" && (assignedRider || order.riderId) && order.status !== "Rejected" && (
                     <div className="p-4 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[#1C1917] text-white flex items-center justify-center shrink-0">
@@ -397,21 +397,21 @@ export function OrderHistoryModal() {
                         </div>
                         <div>
                           <p className="text-xs font-bold text-[#1C1917]">
-                            {assignedRider.name}
+                            {assignedRider ? assignedRider.name : "Delivery Partner Assigned"}
                           </p>
                           <p className="text-[11px] text-[#78716C]">
-                            {assignedRider.vehicle} • ★ {assignedRider.rating}
+                            {assignedRider ? `${assignedRider.vehicle} • ★ ${assignedRider.rating}` : "Express Bike Dispatch"}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <a
-                          href={`tel:${assignedRider.phone}`}
+                          href={`tel:${(assignedRider?.phone || "9625750927").replace(/\D/g, "")}`}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-[#E7E0D8] text-xs font-semibold text-[#1C1917] hover:border-[#C2410C]"
                         >
                           <Phone className="w-3.5 h-3.5 text-[#C2410C]" />
-                          <span>Call Rider</span>
+                          <span>Call Driver</span>
                         </a>
                       </div>
                     </div>

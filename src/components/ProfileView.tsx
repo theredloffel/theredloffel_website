@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useKitchen } from "@/context/KitchenContext";
 import {
   ArrowLeft,
+  Bike,
   Phone,
   ShoppingBag,
   BookOpen,
@@ -230,6 +231,17 @@ export function ProfileView() {
               <span>Sign In with Mobile</span>
               <ArrowRight className="w-5 h-5" />
             </button>
+
+            {/* Quick Link to Driver Hub for Delivery Partners */}
+            <div className="mt-4 pt-4 border-t border-[#E7E0D8] text-center">
+              <Link
+                href="/driver"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#FFF7ED] hover:bg-[#FFEDD5] border border-[#FED7AA] text-[#C2410C] text-xs font-bold transition-all shadow-2xs"
+              >
+                <Bike className="w-4 h-4 text-[#C2410C]" />
+                <span>Driver Partner Fleet Login →</span>
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -320,6 +332,27 @@ export function ProfileView() {
                 OTHER INFORMATION
               </span>
               <div className="bg-white rounded-2xl border border-[#E7E0D8] divide-y divide-[#E7E0D8] shadow-2xs overflow-hidden">
+                {/* Driver Partner Hub */}
+                <Link
+                  href="/driver"
+                  className="w-full p-4 flex items-center justify-between hover:bg-[#FAF8F5] transition-colors text-left group"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-2xl bg-[#FFF7ED] text-[#C2410C] flex items-center justify-center shrink-0">
+                      <Bike className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-base font-bold text-[#1C1917] group-hover:text-[#C2410C] transition-colors block leading-tight">
+                        Driver Partner Hub
+                      </span>
+                      <span className="text-xs text-[#78716C] mt-0.5 block">
+                        Assigned deliveries & live GPS routing
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-[#A8A29E] group-hover:text-[#1C1917] transition-colors" />
+                </Link>
+
                 {/* Share the app */}
                 <button
                   type="button"

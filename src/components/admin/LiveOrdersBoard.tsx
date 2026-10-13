@@ -316,6 +316,8 @@ export function LiveOrdersBoard() {
       order.status === "Out for Delivery" ||
       order.status === "Ready";
 
+    const cardRider = riders.find((r) => r.id === order.riderId);
+
     // 1. New order: green color transparent card
     // 2. Confirmed order: yellow card
     // 3. In road order: small bike icon at the top of the card
@@ -446,6 +448,34 @@ export function LiveOrdersBoard() {
               </span>
             </div>
           </div>
+
+          {/* Assigned Driver Box (Always visible on mobile & desktop) */}
+          {(isInRoad || cardRider || order.riderId) && (
+            <div className="mt-2.5 p-2.5 rounded-2xl bg-orange-50 border border-orange-200/90 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-xl bg-orange-100 text-[#C2410C] flex items-center justify-center shrink-0">
+                  <Bike className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[9px] uppercase font-bold tracking-wider text-[#C2410C] block leading-none">
+                    Assigned Driver
+                  </span>
+                  <p className="font-bold text-[#1C1917] truncate mt-0.5">
+                    {cardRider ? cardRider.name : "Driver Assigned"}
+                  </p>
+                </div>
+              </div>
+              {cardRider?.phone && (
+                <a
+                  href={`tel:${cardRider.phone.replace(/\D/g, "")}`}
+                  className="px-2.5 py-1 rounded-xl bg-white border border-orange-200 text-[11px] font-bold text-[#C2410C] hover:bg-[#FFF7ED] flex items-center gap-1 shadow-2xs shrink-0"
+                >
+                  <Phone className="w-3 h-3" />
+                  <span>Call</span>
+                </a>
+              )}
+            </div>
+          )}
 
           {/* Items & Total */}
           <div className="mt-3 space-y-1.5">
