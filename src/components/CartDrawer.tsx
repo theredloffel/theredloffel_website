@@ -16,9 +16,7 @@ import {
   Tag,
   Percent,
   Check,
-  ChevronDown,
 } from "lucide-react";
-import { AddAddressFlowModal } from "@/components/AddAddressFlowModal";
 
 export function CartDrawer() {
   const {
@@ -50,15 +48,9 @@ export function CartDrawer() {
     setIsAuthOpen,
     showToast,
     isStoreOpen,
-    savedLocations,
-    locationLabel,
-    setLocationLabel,
-    locationAddress,
-    setLocationAddress,
   } = useKitchen();
 
   const [couponCodeInput, setCouponCodeInput] = useState("");
-  const [isAddAddressFlowOpen, setIsAddAddressFlowOpen] = useState(false);
 
   if (!isCartOpen) return null;
 
@@ -143,61 +135,6 @@ export function CartDrawer() {
               </div>
             ) : (
               <>
-                {/* Free Doorstep Delivery Banner */}
-                <div className="bg-white p-3 rounded-2xl border border-[#E7E0D8] flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 text-[#1C1917] font-semibold">
-                    <ShoppingBag className="w-4 h-4 text-[#C2410C]" />
-                    <span>Doorstep Delivery</span>
-                  </div>
-                  <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 text-[11px]">
-                    FREE DELIVERY
-                  </span>
-                </div>
-
-                {/* Multiple Address Dropdown Form */}
-                {user.isLoggedIn && savedLocations.length > 0 && (
-                  <div className="bg-white p-3 rounded-2xl border border-[#E7E0D8] space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-[#78716C] uppercase tracking-wider text-[10px]">
-                        Deliver To
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setIsAddAddressFlowOpen(true)}
-                        className="text-[11px] font-bold text-[#C2410C] hover:underline cursor-pointer"
-                      >
-                        + Add Location
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <select
-                        value={locationAddress || (savedLocations[0]?.address ?? "")}
-                        onChange={(e) => {
-                          if (e.target.value === "__ADD_NEW__") {
-                            setIsAddAddressFlowOpen(true);
-                            return;
-                          }
-                          const selected = savedLocations.find((l) => l.address === e.target.value);
-                          if (selected) {
-                            setLocationLabel(selected.label);
-                            setLocationAddress(selected.address);
-                          }
-                        }}
-                        className="w-full appearance-none pl-8 pr-7 py-2 rounded-xl border border-[#E7E0D8] bg-[#FAF8F5] text-xs font-bold text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden cursor-pointer"
-                      >
-                        {savedLocations.map((loc) => (
-                          <option key={loc.id} value={loc.address}>
-                            {loc.label} — {loc.house ? `${loc.house}, ` : ""}{loc.street || loc.address}
-                          </option>
-                        ))}
-                        <option value="__ADD_NEW__">+ Add New Delivery Address...</option>
-                      </select>
-                      <MapPin className="w-3.5 h-3.5 text-[#C2410C] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      <ChevronDown className="w-3.5 h-3.5 text-[#78716C] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                  </div>
-                )}
-
                 {/* Items List */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
@@ -539,18 +476,6 @@ export function CartDrawer() {
           )}
         </div>
       </div>
-
-      {isAddAddressFlowOpen && (
-        <AddAddressFlowModal
-          isOpen={true}
-          onClose={() => setIsAddAddressFlowOpen(false)}
-          onSuccess={(loc) => {
-            setLocationLabel(loc.label);
-            setLocationAddress(loc.address);
-            setIsAddAddressFlowOpen(false);
-          }}
-        />
-      )}
     </div>
   );
 }
