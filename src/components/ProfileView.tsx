@@ -52,6 +52,7 @@ export function ProfileView() {
     setLocationAddress,
     savedLocations,
     addSavedLocation,
+    removeSavedLocation,
     setIsAuthOpen,
     showToast,
   } = useKitchen();
@@ -84,9 +85,7 @@ export function ProfileView() {
   // Form Fields
   const [newTag, setNewTag] = useState<"HOME" | "WORK" | "HOSTEL" | "OTHER">("HOME");
   const [receiverName, setReceiverName] = useState(user.name || "Customer");
-  const [newAddressText, setNewAddressText] = useState(
-    "Knowledge Park III, Greater Noida"
-  );
+  const [newAddressText, setNewAddressText] = useState("");
   const [newDetailText, setNewDetailText] = useState("");
 
   const handleBack = () => {
@@ -151,9 +150,9 @@ export function ProfileView() {
 
   const handleCenterGPS = () => {
     setMapOffset({ x: 0, y: 0 });
-    setCurrentLocality("Raghuma Boys Hostel Block C, Knowledge Park III");
+    setCurrentLocality("Knowledge Park III");
     setCurrentCity("Greater Noida, Uttar Pradesh, 201310");
-    setNewAddressText("Raghuma Boys Hostel Block C, Knowledge Park III, Greater Noida");
+    setNewAddressText("Knowledge Park III, Greater Noida");
     showToast("GPS location centered!", "info");
   };
 
@@ -268,7 +267,7 @@ export function ProfileView() {
               </h2>
               <div className="flex items-center gap-2 mt-1.5 text-sm font-semibold text-[#57534E]">
                 <Phone className="w-4 h-4 text-[#78716C]" />
-                <span>{user.phone || "6297673521"}</span>
+                <span>{user.phone}</span>
               </div>
             </div>
 
@@ -555,144 +554,76 @@ export function ProfileView() {
               </span>
 
               <div className="space-y-3">
-                {/* Card 1: Home (raghuma boys hostel) with You're here */}
-                <div
-                  onClick={() => {
-                    setLocationLabel("HOME");
-                    setLocationAddress(
-                      "raghuma boys hostel block c, near sharda university, Knowledge Park III, Greater Noida"
-                    );
-                    showToast("Delivery address set to Home", "success");
-                  }}
-                  className={`p-4 rounded-2xl bg-white border transition-all cursor-pointer relative shadow-2xs ${
-                    locationLabel === "HOME"
-                      ? "border-emerald-500 ring-2 ring-emerald-500/15"
-                      : "border-[#E7E0D8] hover:border-[#1C1917]"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="flex flex-col items-center">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                          <Home className="w-5 h-5" />
-                        </div>
-                        <span className="text-[9px] font-bold text-emerald-700 mt-1 bg-emerald-100/70 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                          You&apos;re here
-                        </span>
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-base text-[#1C1917]">Home</h4>
-                        <p className="text-xs text-[#57534E] mt-1 leading-relaxed">
-                          raghuma boys hostel block c, near sharda university, Knowledge Park III,
-                          Greater Noida
-                        </p>
-                        <p className="text-xs font-semibold text-[#78716C] mt-1.5">
-                          Phone number:{" "}
-                          <span className="text-[#1C1917]">{user.phone || "6297673521"}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <Pin className="w-4 h-4 text-[#A8A29E] shrink-0" />
+                {savedLocations.length === 0 ? (
+                  <div className="p-8 rounded-2xl bg-white border border-[#E7E0D8] text-center space-y-2">
+                    <MapPin className="w-8 h-8 text-[#A8A29E] mx-auto" />
+                    <p className="text-sm font-bold text-[#1C1917]">No saved addresses yet</p>
+                    <p className="text-xs text-[#78716C]">
+                      Click &quot;Add new address&quot; above to save your delivery location.
+                    </p>
                   </div>
-
-                  {/* Share banner from screenshot 3 */}
-                  {showShareBanner && (
-                    <div className="mt-3 p-2.5 rounded-xl bg-[#FFF7ED] border border-[#FFEDD5] flex items-center justify-between text-xs text-[#9A3412]">
-                      <div className="flex items-center gap-2">
-                        <Share2 className="w-3.5 h-3.5 text-[#C2410C]" />
-                        <span className="font-medium">
-                          Now share your addresses with friends and family
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowShareBanner(false);
+                ) : (
+                  savedLocations.map((loc) => {
+                    const isSelected = locationAddress === loc.address;
+                    return (
+                      <div
+                        key={loc.id}
+                        onClick={() => {
+                          setLocationLabel(loc.label);
+                          setLocationAddress(loc.address);
+                          showToast(`Delivery address set to ${loc.label}`, "success");
                         }}
-                        className="text-[#9A3412] hover:text-[#C2410C] p-0.5"
+                        className={`p-4 rounded-2xl bg-white border transition-all cursor-pointer relative shadow-2xs ${
+                          isSelected
+                            ? "border-emerald-500 ring-2 ring-emerald-500/15"
+                            : "border-[#E7E0D8] hover:border-[#1C1917]"
+                        }`}
                       >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Card 2: Sharda University */}
-                <div
-                  onClick={() => {
-                    setLocationLabel("Sharda University");
-                    setLocationAddress(
-                      "sharda university, 2 Floor, vivekanand hostel, Sharda University, Knowledge Park III, Greater Noida"
-                    );
-                    showToast("Delivery address set to Sharda University", "success");
-                  }}
-                  className={`p-4 rounded-2xl bg-white border transition-all cursor-pointer relative shadow-2xs ${
-                    locationLabel === "Sharda University"
-                      ? "border-emerald-500 ring-2 ring-emerald-500/15"
-                      : "border-[#E7E0D8] hover:border-[#1C1917]"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="flex flex-col items-center">
-                        <div className="w-10 h-10 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center">
-                          <MapPin className="w-5 h-5" />
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3">
+                            <div className="flex flex-col items-center">
+                              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                                <Home className="w-5 h-5" />
+                              </div>
+                              {isSelected && (
+                                <span className="text-[9px] font-bold text-emerald-700 mt-1 bg-emerald-100/70 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                  Active
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-base text-[#1C1917]">{loc.label}</h4>
+                              <p className="text-xs text-[#57534E] mt-1 leading-relaxed">
+                                {loc.address}
+                              </p>
+                              {loc.detail && (
+                                <p className="text-xs text-[#78716C] mt-0.5">
+                                  {loc.detail}
+                                </p>
+                              )}
+                              {user.phone && (
+                                <p className="text-xs font-semibold text-[#78716C] mt-1.5">
+                                  Phone number: <span className="text-[#1C1917]">{user.phone}</span>
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeSavedLocation(loc.id);
+                            }}
+                            className="p-1 text-[#A8A29E] hover:text-rose-600 transition-colors"
+                            title="Remove address"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
-                        <span className="text-[9px] font-bold text-teal-700 mt-1 bg-teal-100/70 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                          481.10 m
-                        </span>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-base text-[#1C1917]">Sharda University</h4>
-                        <p className="text-xs text-[#57534E] mt-1 leading-relaxed">
-                          sharda university, 2 Floor, vivekanand hostel, Sharda University,
-                          Knowledge Park III, Greater Noida
-                        </p>
-                        <p className="text-xs font-semibold text-[#78716C] mt-1.5">
-                          Phone number:{" "}
-                          <span className="text-[#1C1917]">{user.phone || "6297673521"}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <Pin className="w-4 h-4 text-[#A8A29E] shrink-0" />
-                  </div>
-                </div>
-
-                {/* Card 3: Casaballa Living */}
-                <div
-                  onClick={() => {
-                    setLocationLabel("HOME");
-                    setLocationAddress(
-                      "Casaballa living, near vsk garden, Knowledge Park III, Greater Noida"
                     );
-                    showToast("Delivery address set to Casaballa living", "success");
-                  }}
-                  className="p-4 rounded-2xl bg-white border border-[#E7E0D8] hover:border-[#1C1917] transition-all cursor-pointer relative shadow-2xs"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className="flex flex-col items-center">
-                        <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                          <Home className="w-5 h-5" />
-                        </div>
-                        <span className="text-[9px] font-bold text-emerald-700 mt-1 bg-emerald-100/70 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                          1.98 km
-                        </span>
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-base text-[#1C1917]">Home</h4>
-                        <p className="text-xs text-[#57534E] mt-1 leading-relaxed">
-                          Casaballa living, near vsk garden, Knowledge Park III, Greater Noida
-                        </p>
-                        <p className="text-xs font-semibold text-[#78716C] mt-1.5">
-                          Phone number: <span className="text-[#1C1917]">8900593986</span>
-                        </p>
-                      </div>
-                    </div>
-                    <Pin className="w-4 h-4 text-[#A8A29E] shrink-0" />
-                  </div>
-                </div>
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -742,10 +673,10 @@ export function ProfileView() {
                     {isSearchDropdownOpen && (
                       <div className="mt-1 bg-white rounded-xl shadow-xl border border-[#E2E8F0] overflow-hidden divide-y divide-[#F1F5F9]">
                         {[
-                          "Raghuma Boys Hostel, Knowledge Park III",
+                          "Knowledge Park III, Greater Noida",
+                          "Near Sharda University, Knowledge Park III",
                           "RCI Vidya Vihar, Knowledge Park III",
-                          "The Circle Cafe, Knowledge Park III",
-                          "Sharda University, Knowledge Park III",
+                          "Pari Chowk, Greater Noida",
                         ].map((loc) => (
                           <button
                             key={loc}
@@ -809,7 +740,7 @@ export function ProfileView() {
                         fill="none"
                       />
 
-                      {/* Raghuma Boys Hostel Blue Polygon */}
+                      {/* Knowledge Park III Hub Polygon */}
                       <polygon
                         points="150,110 240,60 280,100 190,150"
                         fill="#DBEAFE"
@@ -830,7 +761,7 @@ export function ProfileView() {
                           fontWeight="bold"
                           fill="#1E3A8A"
                         >
-                          Raghuma Boys Hostel
+                          Knowledge Park III
                         </text>
                         <text
                           x="10"
@@ -839,7 +770,7 @@ export function ProfileView() {
                           fontSize="8"
                           fill="#3B82F6"
                         >
-                          रघुमा बॉएज हॉस्टल
+                          नॉलेज पार्क III
                         </text>
                       </g>
 

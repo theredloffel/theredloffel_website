@@ -32,11 +32,11 @@ export function CheckoutModal() {
     }
   }, [isCheckoutOpen, user.isLoggedIn, setIsCheckoutOpen, setIsAuthOpen, showToast]);
 
-  const [customerName, setCustomerName] = useState(user.name || "Gourmet Member");
+  const [customerName, setCustomerName] = useState(user.name || "");
   const [customerPhone, setCustomerPhone] = useState(user.phone || "");
-  const [house, setHouse] = useState("Hostel Block C, Room 204");
-  const [street, setStreet] = useState(locationAddress || "raghuma boys hostel block c");
-  const [landmark, setLandmark] = useState("Campus Gate 2");
+  const [house, setHouse] = useState("");
+  const [street, setStreet] = useState(locationAddress || "");
+  const [landmark, setLandmark] = useState("");
 
   React.useEffect(() => {
     if (user.phone) setCustomerPhone(user.phone);

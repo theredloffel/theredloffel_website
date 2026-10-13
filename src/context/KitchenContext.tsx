@@ -134,14 +134,6 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     name: "",
     phone: "",
     isLoggedIn: false,
-    defaultAddress: {
-      house: "raghuma boys hostel block c",
-      street: "near sharda university",
-      landmark: "Knowledge Park III, Greater Noida",
-      lat: 28.4744,
-      lng: 77.504,
-      accuracy: 10,
-    },
   });
 
   // UI state
@@ -165,8 +157,8 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   // Search & Veg filter
   const [searchQuery, setSearchQuery] = useState("");
   const [isVegOnly, setIsVegOnly] = useState(false);
-  const [locationLabel, setLocationLabel] = useState("HOME");
-  const [locationAddress, setLocationAddress] = useState("raghuma boys hostel block c, near sharda university, Knowledge Park III, Greater Noida");
+  const [locationLabel, setLocationLabel] = useState("");
+  const [locationAddress, setLocationAddress] = useState("");
 
   // Admin Search & Store Open Status
   const [isStoreOpen, setIsStoreOpen] = useState(true);
@@ -187,26 +179,7 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([
-    {
-      id: "loc-1",
-      label: "HOME",
-      address: "raghuma boys hostel block c, near sharda university, Knowledge Park III, Greater Noida",
-      detail: "raghuma boys hostel block c, near sharda university, Knowledge Park III, Greater Noida",
-    },
-    {
-      id: "loc-2",
-      label: "Sharda University",
-      address: "sharda university, 2 Floor, vivekanand hostel, Sharda University, Knowledge Park III, Greater Noida",
-      detail: "sharda university, 2 Floor, vivekanand hostel, Sharda University, Knowledge Park III, Greater Noida",
-    },
-    {
-      id: "loc-3",
-      label: "HOME",
-      address: "Casaballa living, near vsk garden, Knowledge Park III, Greater Noida",
-      detail: "Casaballa living, near vsk garden, Knowledge Park III, Greater Noida",
-    },
-  ]);
+  const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([]);
 
   // Load saved state from localStorage if available
   useEffect(() => {
@@ -240,14 +213,16 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         } catch {}
       }
 
-      const savedOrders = localStorage.getItem("lebistro_orders");
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
+      // Purge any stale legacy orders cache on app load so demo orders never persist
+      try {
+        localStorage.removeItem("lebistro_orders");
+      } catch {}
 
       const savedMenu = localStorage.getItem("lebistro_menu");
       if (savedMenu) setMenuItems(JSON.parse(savedMenu));
 
-      const storedLocations = localStorage.getItem("lebistro_saved_locations");
-      if (storedLocations) setSavedLocations(JSON.parse(storedLocations));
+      // Clear any legacy demo saved locations
+      localStorage.removeItem("lebistro_saved_locations");
 
       const storedStoreOpen = localStorage.getItem("lebistro_store_open");
       if (storedStoreOpen !== null) setIsStoreOpen(storedStoreOpen === "true");
@@ -264,8 +239,11 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     const loadBackendData = async () => {
       // Orders
       const { orders: remoteOrders } = await orderService.fetchOrders();
-      if (isMounted && remoteOrders.length > 0) {
+      if (isMounted) {
         setOrders(remoteOrders);
+        try {
+          localStorage.setItem("lebistro_orders", JSON.stringify(remoteOrders));
+        } catch {}
       }
 
       // Menu
@@ -857,12 +835,38 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     showToast(`Dish details updated for ${updatedItem.name}`, "success");
   };
 
-  // Location persistence
+  // User-specific saved locations management
   useEffect(() => {
-    try {
-      localStorage.setItem("lebistro_saved_locations", JSON.stringify(savedLocations));
-    } catch {}
-  }, [savedLocations]);
+    if (user.isLoggedIn && user.phone) {
+      const cleanPhone = user.phone.replace(/\D/g, "");
+      const stored = localStorage.getItem(`lebistro_saved_locations_${cleanPhone}`);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setSavedLocations(parsed);
+            if (parsed.length > 0 && !locationAddress) {
+              setLocationLabel(parsed[0].label);
+              setLocationAddress(parsed[0].address);
+            }
+          }
+        } catch {}
+      }
+    } else {
+      setSavedLocations([]);
+      setLocationAddress("");
+      setLocationLabel("");
+    }
+  }, [user.isLoggedIn, user.phone]);
+
+  useEffect(() => {
+    if (user.isLoggedIn && user.phone) {
+      const cleanPhone = user.phone.replace(/\D/g, "");
+      try {
+        localStorage.setItem(`lebistro_saved_locations_${cleanPhone}`, JSON.stringify(savedLocations));
+      } catch {}
+    }
+  }, [savedLocations, user.isLoggedIn, user.phone]);
 
   const addSavedLocation = ({ label, address, detail }: { label: string; address: string; detail?: string }) => {
     const cleanLabel = (label.trim() || "OTHER").toUpperCase();
@@ -962,6 +966,9 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     setCookingNotes("");
     setActiveOrderId(null);
     setSelectedTrackingOrderId(null);
+    setSavedLocations([]);
+    setLocationAddress("");
+    setLocationLabel("");
 
     // 4. Remove active session storage keys
     try {

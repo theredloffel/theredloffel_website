@@ -43,7 +43,7 @@ export function MapLocationPickerModal() {
   // Details form inputs (when clicking "Add more address details")
   const [formAddress, setFormAddress] = useState(DEFAULT_MAP_CENTER.address);
   const [formFlat, setFormFlat] = useState("");
-  const [formTag, setFormTag] = useState<"HOME" | "WORK" | "HOSTEL" | "OTHER">("HOSTEL");
+  const [formTag, setFormTag] = useState<"HOME" | "WORK" | "HOSTEL" | "OTHER">("HOME");
 
   if (!isMapPickerOpen) return null;
 
@@ -215,7 +215,7 @@ export function MapLocationPickerModal() {
                     required
                     value={formAddress}
                     onChange={(e) => setFormAddress(e.target.value)}
-                    placeholder="e.g. Raghuma Boys Hostel Block C, Knowledge Park III"
+                    placeholder="Complete delivery address, building, or street"
                     className="w-full px-4 py-3 pl-11 rounded-2xl border border-[#E7E0D8] bg-white text-xs sm:text-sm text-[#1C1917] font-semibold placeholder:text-[#94A3B8] focus:outline-hidden focus:border-[#00875A] focus:ring-2 focus:ring-[#00875A]/20 transition-all"
                   />
                   <MapPin className="w-4 h-4 text-[#00875A] absolute left-3.5 top-3.5" />

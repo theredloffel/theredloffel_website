@@ -113,7 +113,7 @@ export function Header() {
               >
                 <MapPin className="w-4 h-4 text-[#C2410C] shrink-0" />
                 <span className="text-xs font-semibold text-[#1C1917] truncate">
-                  {locationAddress || "raghuma boys hostel block c"}
+                  {locationAddress || "Select Delivery Location"}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-[#78716C] shrink-0 group-hover:text-[#1C1917] transition-colors" />
               </button>
@@ -263,8 +263,14 @@ export function Header() {
 
               <div className="flex items-center gap-1 mt-0.5">
                 <p className="text-xs font-bold text-[#1C1917] truncate leading-tight">
-                  <span className="text-[#C2410C]">{locationLabel}</span>
-                  <span className="text-[#78716C] font-normal"> - {locationAddress}</span>
+                  {locationAddress ? (
+                    <>
+                      <span className="text-[#C2410C]">{locationLabel || "Deliver to"}</span>
+                      <span className="text-[#78716C] font-normal"> - {locationAddress}</span>
+                    </>
+                  ) : (
+                    <span className="text-[#78716C] font-normal">Select Delivery Location</span>
+                  )}
                 </p>
                 <ChevronDown className="w-3.5 h-3.5 text-[#1C1917] shrink-0" />
               </div>

@@ -31,9 +31,18 @@ export function AdminOrderHistory() {
   // Helper to get formatted date string for an order
   const getOrderDate = (order: Order) => {
     if (order.date) return order.date;
-    if (order.createdAt.includes("Yesterday")) return "11 Oct 2026";
-    if (order.createdAt.includes("10 Oct")) return "10 Oct 2026";
-    return "12 Oct 2026";
+    if (order.createdTimestamp) {
+      return new Date(order.createdTimestamp).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    }
+    return new Date().toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   };
 
   // Extract all distinct dates in descending order

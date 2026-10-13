@@ -506,7 +506,7 @@ export const RIDERS: Rider[] = [
     phone: "+91 95400 60366",
     vehicle: "Hero Electric Optima (DL-03-EM-4091)",
     rating: 4.9,
-    activeOrders: 1,
+    activeOrders: 0,
   },
   {
     id: "rider-2",
@@ -514,7 +514,7 @@ export const RIDERS: Rider[] = [
     phone: "+91 98111 22334",
     vehicle: "Honda Activa 6G (DL-01-HL-8821)",
     rating: 4.8,
-    activeOrders: 1,
+    activeOrders: 0,
   },
   {
     id: "rider-3",
