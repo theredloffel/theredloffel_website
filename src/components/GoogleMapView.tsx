@@ -492,7 +492,7 @@ export const GoogleMapView = forwardRef<GoogleMapViewRef, GoogleMapViewProps>(fu
         </div>
       </div>
 
-      {/* Google Cloud Billing Error Notice */}
+      {/* Google Cloud Auth / Domain Error Notice */}
       {isBillingError && (
         <div className="absolute top-16 left-3 right-3 z-30 p-3 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 text-xs shadow-xl flex items-start gap-2.5 animate-in fade-in">
           <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shrink-0 mt-0.5 font-bold text-[11px]">
@@ -500,10 +500,10 @@ export const GoogleMapView = forwardRef<GoogleMapViewRef, GoogleMapViewProps>(fu
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-extrabold text-xs text-amber-950">
-              Google Maps Billing Needs Activation
+              Google Maps Domain Authorization Required
             </p>
             <p className="text-[11px] text-amber-900 mt-0.5 leading-relaxed">
-              Google requires linking a billing account to your project (includes $200 free credit/mo). You can still type and search hostels or streets directly in the search bar above.
+              If billing is already active on your Google Cloud project, this domain must be authorized. Add <strong>*.theredloffel.in/*</strong> and <strong>*.vercel.app/*</strong> to your API key&apos;s Allowed Website Referrers in Google Cloud Console.
             </p>
           </div>
           <button
