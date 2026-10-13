@@ -32,8 +32,11 @@ import {
   FileText,
   MessageSquare,
   Ticket,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { StoreStatusConfirmModal } from "@/components/admin/StoreStatusConfirmModal";
+import { AddDriverModal } from "@/components/admin/AddDriverModal";
 
 export type AdminSettingsPage = "overview" | "details" | "preferences" | "menu" | "history" | "coupons";
 
@@ -48,7 +51,8 @@ export function AdminSettings({
   onClose,
   initialTab = "overview",
 }: AdminSettingsProps) {
-  const { riders, orders, showToast, isStoreOpen, toggleStoreOpen } = useKitchen();
+  const { riders, orders, showToast, isStoreOpen, toggleStoreOpen, removeRider } = useKitchen();
+  const [isAddDriverModalOpen, setIsAddDriverModalOpen] = useState(false);
 
   // Active page: "overview" (row list) or dedicated page: "details" | "preferences" | "menu" | "history" | "coupons"
   const [activePage, setActivePage] = useState<AdminSettingsPage>(() => {
@@ -571,42 +575,84 @@ export function AdminSettings({
                     <p className="text-[11px] text-[#78716C]">Riders assigned to on-road orders</p>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsAddDriverModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#C2410C] hover:bg-[#9A3412] text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Driver</span>
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {riders.map((rider) => (
-                  <div
-                    key={rider.id}
-                    className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E7E0D8] space-y-2 flex flex-col justify-between"
+              {riders.length === 0 ? (
+                <div className="p-8 text-center bg-[#FAF8F5] rounded-2xl border border-dashed border-[#E7E0D8] space-y-2">
+                  <Bike className="w-8 h-8 text-[#A8A29E] mx-auto stroke-[1.5]" />
+                  <p className="text-xs font-semibold text-[#1C1917]">No Delivery Drivers Added</p>
+                  <p className="text-[11px] text-[#78716C] max-w-sm mx-auto">
+                    Add delivery drivers with mobile number and OTP verification to assign them to on-road orders.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddDriverModalOpen(true)}
+                    className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#C2410C] text-white text-xs font-bold cursor-pointer"
                   >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-sm text-[#1C1917]">{rider.name}</span>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                          {rider.activeOrders > 0 ? `${rider.activeOrders} on Road` : "Available"}
-                        </span>
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Add Driver via OTP</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {riders.map((rider) => (
+                    <div
+                      key={rider.id}
+                      className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E7E0D8] space-y-2 flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-sm text-[#1C1917]">{rider.name}</span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                            {rider.activeOrders > 0 ? `${rider.activeOrders} on Road` : "Available"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-[#78716C] mt-0.5 flex items-center gap-1">
+                          <Bike className="w-3 h-3 text-[#C2410C]" />
+                          <span>{rider.vehicle}</span>
+                        </p>
                       </div>
-                      <p className="text-xs text-[#78716C] mt-0.5 flex items-center gap-1">
-                        <Bike className="w-3 h-3 text-[#C2410C]" />
-                        <span>{rider.vehicle}</span>
-                      </p>
-                    </div>
 
-                    <div className="pt-2 border-t border-[#E7E0D8] flex items-center justify-between text-xs">
-                      <span className="text-[#78716C] font-mono">{rider.phone}</span>
-                      <a
-                        href={`https://wa.me/${rider.phone.replace(/[^0-9]/g, "")}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span>WhatsApp</span>
-                      </a>
+                      <div className="pt-2 border-t border-[#E7E0D8] flex items-center justify-between text-xs">
+                        <span className="text-[#78716C] font-mono">{rider.phone}</span>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={`https://wa.me/${rider.phone.replace(/[^0-9]/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1"
+                            title="Chat on WhatsApp"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" />
+                            <span>WhatsApp</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`Remove ${rider.name} from fleet?`)) {
+                                removeRider(rider.id);
+                              }
+                            }}
+                            className="text-rose-600 hover:text-rose-700 p-1 rounded-md hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Remove Driver"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -842,6 +888,12 @@ export function AdminSettings({
         action={confirmAction}
         onConfirm={handleConfirmToggle}
         onCancel={() => setIsConfirmModalOpen(false)}
+      />
+
+      {/* Modal for Registering Driver with Phone OTP */}
+      <AddDriverModal
+        isOpen={isAddDriverModalOpen}
+        onClose={() => setIsAddDriverModalOpen(false)}
       />
     </div>
   );

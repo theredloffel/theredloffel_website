@@ -240,30 +240,111 @@ export async function sendWhatsAppOrderReceipt(
   return sendWhatsAppText(formattedTo, messageBody);
 }
 
+export type NotificationType =
+  | "CONFIRMED_PREPARING"
+  | "REJECTED"
+  | "OUT_FOR_DELIVERY"
+  | "DRIVER_TASK"
+  | "DELIVERED";
+
+export interface StatusNotificationPayload {
+  toPhone: string;
+  orderId: string;
+  type: NotificationType;
+  rejectionReason?: string;
+  amount?: number;
+  riderName?: string;
+  riderPhone?: string;
+  customerName?: string;
+  location?: string;
+}
+
 /**
- * 4. Send Live Kitchen Status Alert (Preparing, Out for Delivery, Delivered)
+ * Builds the exact notification text for customer and driver messages
+ */
+export function buildNotificationMessage(payload: Omit<StatusNotificationPayload, "toPhone">): string {
+  const { type, orderId, rejectionReason, amount, riderName, customerName, location } = payload;
+
+  switch (type) {
+    case "CONFIRMED_PREPARING":
+      return `🍳 *The Red Löffel*\n\nYour order #${orderId} has been confirmed and is being prepared! Fresh & hot dishes are currently being crafted in our kitchen.`;
+
+    case "REJECTED":
+      return `❌ *The Red Löffel*\n\nYour order #${orderId} is rejected due to: ${rejectionReason || "out of stock"}. Any amount paid will be promptly refunded.`;
+
+    case "OUT_FOR_DELIVERY":
+      return `🛵 *The Red Löffel*\n\nYour order is out for delivery - Order ID: #${orderId} - Amount: ₹${amount || 0}${
+        riderName ? ` (Driver: ${riderName})` : ""
+      }. Please keep cash/UPI ready!`;
+
+    case "DRIVER_TASK":
+      return `📋 *The Red Löffel — Delivery Task*\n\nPending delivery - Location: ${location || "Customer Location"} - Order No: #${orderId} - Name: ${
+        customerName || "Customer"
+      } - Amount: ₹${amount || 0}`;
+
+    case "DELIVERED":
+      return `🎉 *The Red Löffel*\n\nOrder #${orderId} has been delivered. Enjoy your meal! 🥄❤️`;
+
+    default:
+      return `Update on order #${orderId} from The Red Löffel.`;
+  }
+}
+
+/**
+ * Generates a direct WhatsApp click-to-chat URL (wa.me) for instant 1-click messaging
+ */
+export function getWhatsAppClickToChatUrl(phone: string, text: string): string {
+  const cleaned = formatWhatsAppNumber(phone);
+  return `https://wa.me/${cleaned}?text=${encodeURIComponent(text)}`;
+}
+
+/**
+ * 4. Send Unified Status Notification via WhatsApp Cloud API or Twilio
+ */
+export async function sendWhatsAppStatusNotification(
+  payload: StatusNotificationPayload
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const messageBody = buildNotificationMessage(payload);
+  return sendWhatsAppText(payload.toPhone, messageBody);
+}
+
+/**
+ * Backward compatibility wrapper for sendWhatsAppStatusUpdate
  */
 export async function sendWhatsAppStatusUpdate(
   toPhone: string,
   orderId: string,
-  status: "PREPARING" | "OUT_FOR_DELIVERY" | "DELIVERED",
+  status: "PREPARING" | "OUT_FOR_DELIVERY" | "DELIVERED" | "REJECTED" | "CONFIRMED_PREPARING" | "DRIVER_TASK",
   riderName?: string,
-  riderPhone?: string
+  riderPhone?: string,
+  rejectionReason?: string,
+  amount?: number,
+  customerName?: string,
+  location?: string
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const formattedTo = formatWhatsAppNumber(toPhone);
-
-  let messageBody = "";
-
-  if (status === "PREPARING") {
-    messageBody = `🔥 *Kitchen Update — Order #${orderId}*\n\nYour gourmet dishes are currently sizzling on the fire and being freshly prepared in our cloud kitchen. Fresh ingredients only!`;
+  let mappedType: NotificationType = "CONFIRMED_PREPARING";
+  if (status === "PREPARING" || status === "CONFIRMED_PREPARING") {
+    mappedType = "CONFIRMED_PREPARING";
+  } else if (status === "REJECTED") {
+    mappedType = "REJECTED";
   } else if (status === "OUT_FOR_DELIVERY") {
-    const riderInfo = riderName
-      ? `\n🚴 Rider: *${riderName}*${riderPhone ? ` (${riderPhone})` : ""}`
-      : "";
-    messageBody = `🛵 *Out for Delivery! — Order #${orderId}*\n\nYour warm meal is sealed in heat-lock packaging and on its way to your hostel/address.${riderInfo}\n\nPlease keep cash ready for handoff.`;
+    mappedType = "OUT_FOR_DELIVERY";
+  } else if (status === "DRIVER_TASK") {
+    mappedType = "DRIVER_TASK";
   } else if (status === "DELIVERED") {
-    messageBody = `🎉 *Delivered — Bon Appétit!*\n\nOrder *#${orderId}* has been delivered to you. We hope every bite delights your palate. Thank you for choosing The Red Löffel! 🥄❤️`;
+    mappedType = "DELIVERED";
   }
 
-  return sendWhatsAppText(formattedTo, messageBody);
+  return sendWhatsAppStatusNotification({
+    toPhone,
+    orderId,
+    type: mappedType,
+    rejectionReason,
+    amount,
+    riderName,
+    riderPhone,
+    customerName,
+    location,
+  });
 }
+

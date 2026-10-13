@@ -66,6 +66,8 @@ interface KitchenContextType {
 
   // Riders
   riders: Rider[];
+  addRider: (rider: { name: string; phone: string; vehicle?: string }) => Rider;
+  removeRider: (riderId: string) => void;
 
   // User Auth
   user: UserProfile;
@@ -125,7 +127,24 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   const [menuItems, setMenuItems] = useState<MenuItem[]>(INITIAL_MENU_ITEMS);
   const [selectedCategory, setSelectedCategory] = useState<Category>("All");
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
-  const [riders, setRiders] = useState<Rider[]>(RIDERS);
+  const [riders, setRiders] = useState<Rider[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("lebistro_riders");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch {}
+    }
+    return RIDERS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("lebistro_riders", JSON.stringify(riders));
+    } catch {}
+  }, [riders]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [deliveryType, setDeliveryType] = useState<"Delivery" | "Pickup">("Delivery");
   const [cookingNotes, setCookingNotes] = useState<string>("");
@@ -280,9 +299,54 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       },
       onUpdate: (updatedOrder) => {
         if (!isMounted) return;
-        setOrders((prev) =>
-          prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
-        );
+        setOrders((prev) => {
+          const prevOrder = prev.find((o) => o.id === updatedOrder.id);
+          if (prevOrder && prevOrder.status !== updatedOrder.status) {
+            // Check if this order belongs to the currently logged in customer
+            const userPhoneClean = (user?.phone || "").replace(/\D/g, "");
+            const orderPhoneClean = (updatedOrder.customerPhone || "").replace(/\D/g, "");
+            if (userPhoneClean && orderPhoneClean && userPhoneClean === orderPhoneClean) {
+              if (updatedOrder.status === "Order Accepted" || updatedOrder.status === "Preparing") {
+                showToast(`Your order #${updatedOrder.id} is confirmed and preparing! 🍳`, "success");
+                if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+                  try {
+                    new Notification("The Red Löffel", {
+                      body: `Your order #${updatedOrder.id} is confirmed and preparing! 🍳`,
+                      icon: "/favicon.ico",
+                    });
+                  } catch {}
+                }
+              } else if (updatedOrder.status === "Rejected") {
+                showToast(
+                  `Your order #${updatedOrder.id} is rejected due to: ${updatedOrder.rejectionReason || "out of stock"}`,
+                  "warning"
+                );
+                if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+                  try {
+                    new Notification("The Red Löffel", {
+                      body: `Your order #${updatedOrder.id} is rejected due to: ${updatedOrder.rejectionReason || "out of stock"}`,
+                      icon: "/favicon.ico",
+                    });
+                  } catch {}
+                }
+              } else if (updatedOrder.status === "In the Road" || updatedOrder.status === "Out for Delivery") {
+                showToast(
+                  `Your order is out for delivery - Order ID: #${updatedOrder.id} - Amount: ₹${updatedOrder.total}`,
+                  "info"
+                );
+                if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+                  try {
+                    new Notification("The Red Löffel", {
+                      body: `Your order is out for delivery - Order ID: #${updatedOrder.id} - Amount: ₹${updatedOrder.total}`,
+                      icon: "/favicon.ico",
+                    });
+                  } catch {}
+                }
+              }
+            }
+          }
+          return prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o));
+        });
       },
       onDelete: (deletedId) => {
         if (!isMounted) return;
@@ -695,9 +759,12 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     rejectionReason?: string,
     silent: boolean = false
   ) => {
+    let targetOrder = orders.find((o) => o.id === orderId);
+
     setOrders((prev) =>
       prev.map((order) => {
         if (order.id === orderId) {
+          targetOrder = order;
           const updated: Order = { ...order, status: newStatus };
           if (newStatus === "Rejected") {
             updated.rejectionReason = rejectionReason || "out of stock";
@@ -734,6 +801,36 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem("lebistro_active_order_id");
       } catch {}
     }
+
+    // Trigger Notification for 1. Confirmed & Preparing OR Rejection with reason
+    if (targetOrder) {
+      const cleanPhone = ((targetOrder as Order).customerPhone || "").replace(/\D/g, "");
+      if (cleanPhone) {
+        if (newStatus === "Order Accepted" || newStatus === "Preparing") {
+          fetch("/api/whatsapp/send-notification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              phone: cleanPhone,
+              orderId: (targetOrder as Order).id,
+              type: "CONFIRMED_PREPARING",
+            }),
+          }).catch((e) => console.error("Notification alert for confirmed order failed:", e));
+        } else if (newStatus === "Rejected") {
+          fetch("/api/whatsapp/send-notification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              phone: cleanPhone,
+              orderId: (targetOrder as Order).id,
+              type: "REJECTED",
+              rejectionReason: rejectionReason || "out of stock",
+            }),
+          }).catch((e) => console.error("Notification alert for rejected order failed:", e));
+        }
+      }
+    }
+
     if (!silent) {
       if (newStatus === "Rejected") {
         showToast(`Order #${orderId} rejected: ${rejectionReason || "out of stock"}`, "warning");
@@ -741,6 +838,38 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         showToast(`Order #${orderId} marked as ${newStatus}`, "info");
       }
     }
+  };
+
+  const addRider = (newRider: { name: string; phone: string; vehicle?: string }): Rider => {
+    const rawPhone = newRider.phone.trim();
+    const cleanDigits = rawPhone.replace(/\D/g, "");
+    const last10 = cleanDigits.slice(-10);
+    const formattedPhone = `+91 ${last10}`;
+
+    const rider: Rider = {
+      id: `rider-${Date.now()}`,
+      name: newRider.name.trim(),
+      phone: formattedPhone,
+      vehicle: (newRider.vehicle || "Motorcycle / Scooter").trim(),
+      rating: 5.0,
+      activeOrders: 0,
+    };
+
+    setRiders((prev) => {
+      // Prevent duplicate phone numbers
+      const filtered = prev.filter(
+        (r) => r.phone.replace(/\D/g, "").slice(-10) !== last10
+      );
+      return [...filtered, rider];
+    });
+
+    showToast(`Driver ${rider.name} verified & added to fleet!`, "success");
+    return rider;
+  };
+
+  const removeRider = (riderId: string) => {
+    setRiders((prev) => prev.filter((r) => r.id !== riderId));
+    showToast("Driver removed from fleet", "info");
   };
 
   const assignRider = (orderId: string, riderId: string, silent: boolean = false) => {
@@ -762,20 +891,44 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     const rider = riders.find((r) => r.id === order.riderId);
     const riderName = rider ? rider.name : "Rider";
 
-    // Trigger Real WhatsApp Notification to Customer
-    const cleanPhone = (order.customerPhone || "").replace(/\D/g, "");
-    if (cleanPhone) {
+    const deliveryAddress = order.address
+      ? `${order.address.house ? `${order.address.house}, ` : ""}${order.address.street || ""}${
+          order.address.landmark ? `, Near ${order.address.landmark}` : ""
+        }`.trim()
+      : "Greater Noida";
+
+    // 1. Notify Customer: "Your order is out for delivery - Order ID: #[id] - Amount: ₹[amount]"
+    const cleanCustomerPhone = (order.customerPhone || "").replace(/\D/g, "");
+    if (cleanCustomerPhone) {
       fetch("/api/whatsapp/send-notification", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          phone: cleanPhone,
+          phone: cleanCustomerPhone,
           orderId: order.id,
-          status: "OUT_FOR_DELIVERY",
+          type: "OUT_FOR_DELIVERY",
+          amount: order.total,
           riderName: rider?.name,
           riderPhone: rider?.phone,
         }),
-      }).catch((e) => console.error("WhatsApp dispatch alert failed:", e));
+      }).catch((e) => console.error("WhatsApp dispatch alert to customer failed:", e));
+    }
+
+    // 2. Notify Driver: "Pending delivery - Location: [location] - Order No: #[id] - Name: [name] - Amount: ₹[amount]"
+    const cleanRiderPhone = (rider?.phone || "").replace(/\D/g, "");
+    if (cleanRiderPhone) {
+      fetch("/api/whatsapp/send-notification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: cleanRiderPhone,
+          orderId: order.id,
+          type: "DRIVER_TASK",
+          customerName: order.customerName,
+          location: deliveryAddress,
+          amount: order.total,
+        }),
+      }).catch((e) => console.error("WhatsApp dispatch alert to driver failed:", e));
     }
 
     setOrders((prev) =>
@@ -789,7 +942,7 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
           : o
       )
     );
-    showToast(`Dispatch summary shared with ${riderName} via WhatsApp!`, "success");
+    showToast(`Dispatch alerts sent to customer and ${riderName}!`, "success");
   };
 
   const retryWhatsApp = (orderId: string) => {
@@ -1022,6 +1175,8 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         sendRiderWhatsApp,
         retryWhatsApp,
         riders,
+        addRider,
+        removeRider,
         user,
         loginWithPhone,
         logout,

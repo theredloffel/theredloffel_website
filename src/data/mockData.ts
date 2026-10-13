@@ -499,32 +499,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
   },
 ];
 
-export const RIDERS: Rider[] = [
-  {
-    id: "rider-1",
-    name: "Rider 1 - Rajesh",
-    phone: "+91 95400 60366",
-    vehicle: "Hero Electric Optima (DL-03-EM-4091)",
-    rating: 4.9,
-    activeOrders: 0,
-  },
-  {
-    id: "rider-2",
-    name: "Rider 2 - Vikram",
-    phone: "+91 98111 22334",
-    vehicle: "Honda Activa 6G (DL-01-HL-8821)",
-    rating: 4.8,
-    activeOrders: 0,
-  },
-  {
-    id: "rider-3",
-    name: "Rider 3 - Amit",
-    phone: "+91 99222 33445",
-    vehicle: "Ather 450X Pro (DL-05-EV-1920)",
-    rating: 4.95,
-    activeOrders: 0,
-  },
-];
+export const RIDERS: Rider[] = [];
 
 export const INITIAL_ORDERS: Order[] = [];
 

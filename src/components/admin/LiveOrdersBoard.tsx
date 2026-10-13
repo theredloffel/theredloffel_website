@@ -24,6 +24,7 @@ import {
   Filter,
 } from "lucide-react";
 import { OrderActionConfirmModal, OrderConfirmActionType } from "./OrderActionConfirmModal";
+import { getWhatsAppClickToChatUrl } from "@/lib/whatsapp";
 
 export type BoardFilter = "All" | "New Order" | "Confirmed Order" | "In Road";
 
@@ -855,63 +856,129 @@ export function LiveOrdersBoard() {
       )}
 
       {/* WhatsApp Message Dispatch Modal Preview */}
-      {whatsAppPreviewOrder && (
-        <div
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setWhatsAppPreviewOrder(null);
-          }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overscroll-contain animate-in fade-in"
-        >
-          <div className="bg-[#FAF8F5] rounded-3xl border border-[#E7E0D8] max-w-md w-full p-6 shadow-2xl space-y-4 overscroll-contain">
-            <div className="flex items-center justify-between border-b border-[#E7E0D8] pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center">
-                  <MessageSquare className="w-4 h-4" />
+      {whatsAppPreviewOrder && (() => {
+        const assignedRider = riders.find((r) => r.id === whatsAppPreviewOrder.riderId);
+        const riderPhone = assignedRider?.phone || "";
+        const deliveryAddress = whatsAppPreviewOrder.address
+          ? `${whatsAppPreviewOrder.address.house ? `${whatsAppPreviewOrder.address.house}, ` : ""}${
+              whatsAppPreviewOrder.address.street || ""
+            }${whatsAppPreviewOrder.address.landmark ? `, Near ${whatsAppPreviewOrder.address.landmark}` : ""}`.trim()
+          : "Greater Noida";
+
+        // 1. Driver Task Text (Exact format requested)
+        const driverTaskMsg = `Pending delivery - Location: ${deliveryAddress} - Order No: #${whatsAppPreviewOrder.id} - Name: ${whatsAppPreviewOrder.customerName} - Amount: ₹${whatsAppPreviewOrder.total}`;
+
+        // 2. Customer Alert Text (Exact format requested)
+        const customerAlertMsg = `Your order is out for delivery - Order ID: #${whatsAppPreviewOrder.id} - Amount: ₹${whatsAppPreviewOrder.total}${
+          assignedRider?.name ? ` (Driver: ${assignedRider.name})` : ""
+        }`;
+
+        return (
+          <div
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setWhatsAppPreviewOrder(null);
+            }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overscroll-contain animate-in fade-in"
+          >
+            <div className="bg-[#FAF8F5] rounded-3xl border border-[#E7E0D8] max-w-lg w-full p-6 shadow-2xl space-y-4 overscroll-contain">
+              <div className="flex items-center justify-between border-b border-[#E7E0D8] pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-serif text-base font-bold text-[#1C1917]">
+                      Order #{whatsAppPreviewOrder.id} Dispatch Alerts
+                    </h4>
+                    <p className="text-[10px] text-[#78716C]">
+                      Rider: {assignedRider?.name || "Assigned Driver"} ({riderPhone || "No Phone"})
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-serif text-base font-bold text-[#1C1917]">
-                    WhatsApp Task Shared
-                  </h4>
-                  <p className="text-[10px] text-[#78716C]">
-                    Dispatched to {riders.find((r) => r.id === whatsAppPreviewOrder.riderId)?.name || "Assigned Rider"}
-                  </p>
+                <button
+                  onClick={() => setWhatsAppPreviewOrder(null)}
+                  className="text-xs text-[#78716C] hover:text-black font-bold p-1"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Driver Message Card */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-bold text-[#1C1917]">
+                  <span className="flex items-center gap-1.5">
+                    <Bike className="w-3.5 h-3.5 text-[#C2410C]" />
+                    <span>Message to Driver:</span>
+                  </span>
+                  {riderPhone && (
+                    <button
+                      type="button"
+                      onClick={() => window.open(getWhatsAppClickToChatUrl(riderPhone, driverTaskMsg), "_blank")}
+                      className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>Send to Driver on WhatsApp</span>
+                    </button>
+                  )}
+                </div>
+                <div className="bg-[#075E54] text-white p-3.5 rounded-2xl text-xs font-mono leading-relaxed">
+                  {driverTaskMsg}
                 </div>
               </div>
-              <button
-                onClick={() => setWhatsAppPreviewOrder(null)}
-                className="text-xs text-[#78716C] hover:text-black font-bold p-1"
-              >
-                ✕
-              </button>
-            </div>
 
-            <div className="bg-[#075E54] text-white p-4 rounded-2xl text-xs space-y-2 font-mono">
-              <p className="font-bold text-[#FED7AA]">🛵 THE RED LÖFFEL DISPATCH TASK</p>
-              <p>Order: #{whatsAppPreviewOrder.id} ({whatsAppPreviewOrder.orderType})</p>
-              <p>Customer: {whatsAppPreviewOrder.customerName} ({whatsAppPreviewOrder.customerPhone})</p>
-              {whatsAppPreviewOrder.address && (
-                <>
-                  <p>Address: {whatsAppPreviewOrder.address.house}, {whatsAppPreviewOrder.address.street}</p>
-                  <p className="text-emerald-200">
-                    Maps: https://www.google.com/maps/dir/?api=1&destination={whatsAppPreviewOrder.address.lat},{whatsAppPreviewOrder.address.lng}
-                  </p>
-                </>
-              )}
-              <div className="pt-1 border-t border-white/20">
-                <p>Items: {whatsAppPreviewOrder.items.map((i) => `${i.quantity}x ${i.name}`).join(", ")}</p>
-                <p>Total: ₹{whatsAppPreviewOrder.total} ({whatsAppPreviewOrder.paymentStatus === "Paid" ? "PREPAID - DO NOT COLLECT" : "COLLECT CASH / UPI"})</p>
+              {/* Customer Message Card */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-bold text-[#1C1917]">
+                  <span className="flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-[#C2410C]" />
+                    <span>Message to Customer:</span>
+                  </span>
+                  {whatsAppPreviewOrder.customerPhone && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        window.open(
+                          getWhatsAppClickToChatUrl(whatsAppPreviewOrder.customerPhone, customerAlertMsg),
+                          "_blank"
+                        )
+                      }
+                      className="text-[11px] text-emerald-700 hover:text-emerald-800 font-bold underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      <span>Send to Customer on WhatsApp</span>
+                    </button>
+                  )}
+                </div>
+                <div className="bg-[#128C7E] text-white p-3.5 rounded-2xl text-xs font-mono leading-relaxed">
+                  {customerAlertMsg}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-2 gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sendRiderWhatsApp(whatsAppPreviewOrder.id);
+                    setWhatsAppPreviewOrder(null);
+                  }}
+                  className="py-3 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Send Automated Alerts</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWhatsAppPreviewOrder(null)}
+                  className="py-3 px-3 rounded-xl bg-[#FAF8F5] hover:bg-[#F5EFEB] border border-[#E7E0D8] text-[#1C1917] text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
               </div>
             </div>
-
-            <button
-              onClick={() => setWhatsAppPreviewOrder(null)}
-              className="w-full py-2.5 rounded-xl bg-[#1C1917] text-white text-xs font-semibold hover:bg-black transition-colors"
-            >
-              Dismiss Preview
-            </button>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Admin Reject Order with Comment Modal */}
       {rejectingOrderId && (
