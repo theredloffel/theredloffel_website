@@ -267,7 +267,11 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       } catch {}
 
       const savedMenu = localStorage.getItem("lebistro_menu");
-      if (savedMenu) setMenuItems(JSON.parse(savedMenu));
+      if (savedMenu && !savedMenu.includes("unsplash.com")) {
+        setMenuItems(JSON.parse(savedMenu));
+      } else if (savedMenu) {
+        localStorage.removeItem("lebistro_menu");
+      }
 
       // Clear any legacy demo saved locations
       localStorage.removeItem("lebistro_saved_locations");

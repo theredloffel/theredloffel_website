@@ -16,6 +16,8 @@ const CATEGORIES_CONFIG: { category: Category; label: string }[] = [
   { category: "Maggi", label: "Maggi" },
   { category: "Fries", label: "Fries" },
   { category: "Bowls", label: "Bowls" },
+  { category: "Cold Coffee & Shakes", label: "Cold Coffee & Shakes" },
+  { category: "Chai & Coffee", label: "Chai & Coffee" },
 ];
 
 function CutleryIcon({ className = "w-5 h-5 text-[#1C1917]" }: { className?: string }) {

@@ -16,9 +16,16 @@ export const metadata: Metadata = {
   description: "Gourmet cloud kitchen. Fresh burgers, rice bowls, loaded fries, and delicacies delivered hot to your doorstep.",
   keywords: ["cloud kitchen", "burgers", "rice bowls", "gourmet delivery", "the red loeffel"],
   icons: {
-    icon: "/logo.jpeg",
-    shortcut: "/logo.jpeg",
-    apple: "/logo.jpeg",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icon.png", sizes: "192x192", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
 };
 

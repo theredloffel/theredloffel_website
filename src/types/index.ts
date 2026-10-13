@@ -8,6 +8,9 @@ export type Category =
   | "Maggi"
   | "Fries"
   | "Bowls"
+  | "Cold Coffee & Shakes"
+  | "Chai & Coffee"
+  | "Chai"
   | "Under ₹99";
 
 export type DietaryType = "veg" | "non-veg";

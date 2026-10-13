@@ -11,28 +11,26 @@ async function seed() {
   console.log("Seeding Supabase database...");
 
   // 1. Seed Menu Items
-  const { data: existingMenu } = await supabase.from("menu_items").select("id").limit(1);
-  if (!existingMenu || existingMenu.length === 0) {
-    const formattedMenu = INITIAL_MENU_ITEMS.map((item) => ({
-      id: item.id,
-      name: item.name,
-      category: item.category,
-      price: item.price,
-      description: item.description,
-      dietary: item.dietary,
-      is_available: item.isAvailable,
-      image: item.image,
-      tag: item.tag || null,
-      preparation_time: item.preparationTime || null,
-      calories: item.calories || null,
-    }));
+  console.log("Clearing and updating Menu Items with new menu...");
+  await supabase.from("menu_items").delete().neq("id", "___none___");
 
-    const { error: menuErr } = await supabase.from("menu_items").insert(formattedMenu);
-    if (menuErr) console.error("Error seeding menu:", menuErr);
-    else console.log(`✓ Seeded ${formattedMenu.length} menu items.`);
-  } else {
-    console.log("Menu items already present. Skipping.");
-  }
+  const formattedMenu = INITIAL_MENU_ITEMS.map((item) => ({
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    price: item.price,
+    description: item.description,
+    dietary: item.dietary,
+    is_available: item.isAvailable,
+    image: item.image,
+    tag: item.tag || null,
+    preparation_time: item.preparationTime || null,
+    calories: item.calories || null,
+  }));
+
+  const { error: menuErr } = await supabase.from("menu_items").insert(formattedMenu);
+  if (menuErr) console.error("Error seeding menu:", menuErr);
+  else console.log(`✓ Seeded ${formattedMenu.length} menu items.`);
 
   // 2. Seed Coupons
   const { data: existingCoupons } = await supabase.from("coupons").select("id").limit(1);

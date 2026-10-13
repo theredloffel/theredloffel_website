@@ -16,6 +16,8 @@ const MENU_CATEGORIES: Category[] = [
   "Maggi",
   "Fries",
   "Bowls",
+  "Cold Coffee & Shakes",
+  "Chai & Coffee",
 ];
 
 const ALL_SECTION_CATEGORIES: Category[] = [
@@ -27,6 +29,8 @@ const ALL_SECTION_CATEGORIES: Category[] = [
   "Maggi",
   "Fries",
   "Bowls",
+  "Cold Coffee & Shakes",
+  "Chai & Coffee",
 ];
 
 export function MenuSection() {

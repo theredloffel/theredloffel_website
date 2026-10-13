@@ -19,6 +19,8 @@ const CATEGORIES: Category[] = [
   "Maggi",
   "Fries",
   "Bowls",
+  "Cold Coffee & Shakes",
+  "Chai & Coffee",
 ];
 
 export function EditItemModal({ item, onClose, onSave }: EditItemModalProps) {
