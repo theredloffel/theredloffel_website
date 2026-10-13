@@ -13,14 +13,24 @@ export function CheckoutModal() {
     deliveryType,
     cartSubtotal,
     deliveryFee,
-    tax,
+    packagingCharge,
     grandTotal,
     user,
     locationAddress,
     locationLabel,
     placeOrder,
     showToast,
+    setIsAuthOpen,
   } = useKitchen();
+
+  // If user somehow accesses checkout without being logged in, redirect to login
+  React.useEffect(() => {
+    if (isCheckoutOpen && !user.isLoggedIn) {
+      setIsCheckoutOpen(false);
+      setIsAuthOpen(true);
+      showToast("Please log in to continue to checkout", "info");
+    }
+  }, [isCheckoutOpen, user.isLoggedIn, setIsCheckoutOpen, setIsAuthOpen, showToast]);
 
   const [customerName, setCustomerName] = useState(user.name || "Gourmet Member");
   const [customerPhone, setCustomerPhone] = useState(user.phone || "");
@@ -45,7 +55,7 @@ export function CheckoutModal() {
 
   // Consent & Payment
   const [whatsAppConsent, setWhatsAppConsent] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState<"Cash on Delivery (COD)" | "Online UPI / Cards">("Online UPI / Cards");
+  const paymentMethod = "Cash on Delivery (COD)";
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isCheckoutOpen) return null;
@@ -61,7 +71,7 @@ export function CheckoutModal() {
             accuracy: Math.round(pos.coords.accuracy || 12),
           });
           setIsDetectingLocation(false);
-          showToast("Live GPS coordinates pinned successfully!", "success");
+          showToast("Delivery address pinned successfully!", "success");
         },
         () => {
           // Fallback to simulated high accuracy pin
@@ -101,38 +111,68 @@ export function CheckoutModal() {
       showToast("Please provide a valid 10-digit WhatsApp number", "warning");
       return;
     }
-    if (deliveryType === "Delivery" && (!house.trim() || !street.trim())) {
+    if (!house.trim() || !street.trim()) {
       showToast("Please enter house number and street address", "warning");
       return;
     }
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      placeOrder({
-        customerName: customerName.trim(),
-        customerPhone: customerPhone.startsWith("+91") ? customerPhone : `+91 ${customerPhone}`,
-        address:
-          deliveryType === "Delivery"
-            ? {
-                house: house.trim(),
-                street: street.trim(),
-                landmark: landmark.trim(),
-                lat: pinnedCoords?.lat || 28.4744,
-                lng: pinnedCoords?.lng || 77.504,
-                accuracy: pinnedCoords?.accuracy || 10,
-              }
-            : undefined,
-        paymentMethod,
-        whatsAppOptIn: whatsAppConsent,
-      });
-      setIsSubmitting(false);
-    }, 1200);
+    const fullPhone = customerPhone.startsWith("+91") ? customerPhone : `+91 ${customerPhone}`;
+    const cleanPhone = customerPhone.replace(/\D/g, "");
+
+    const orderData = {
+      customerName: customerName.trim(),
+      customerPhone: fullPhone,
+      address: {
+        house: house.trim(),
+        street: street.trim(),
+        landmark: landmark.trim(),
+        lat: pinnedCoords?.lat || 28.4744,
+        lng: pinnedCoords?.lng || 77.4917,
+        accuracy: pinnedCoords?.accuracy || 10,
+      },
+      paymentMethod: "Cash on Delivery (COD)" as const,
+      whatsAppOptIn: whatsAppConsent,
+    };
+
+    placeOrder(orderData);
+
+    // Send Real WhatsApp Order Confirmation Receipt
+    if (whatsAppConsent) {
+      fetch("/api/whatsapp/send-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          order: {
+            orderId: `TRL-${Math.floor(1000 + Math.random() * 9000)}`,
+            customerName: customerName.trim(),
+            items: cart.map((i) => ({
+              name: i.item.name,
+              quantity: i.quantity,
+              price: i.item.price,
+            })),
+            totalAmount: grandTotal,
+            deliveryAddress: `${house.trim()}, ${street.trim()}${landmark.trim() ? `, near ${landmark.trim()}` : ""}`,
+            deliveryEta: "25-35 mins",
+          },
+        }),
+      }).catch((e) => console.error("WhatsApp receipt send failed:", e));
+    }
+
+    setIsSubmitting(false);
+    setIsCheckoutOpen(false);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-[#FAF8F5] rounded-3xl border border-[#E7E0D8] shadow-2xl overflow-hidden my-8">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setIsCheckoutOpen(false);
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto overscroll-contain animate-in fade-in duration-200"
+    >
+      <div className="relative w-full max-w-2xl bg-[#FAF8F5] rounded-3xl border border-[#E7E0D8] shadow-2xl overflow-hidden my-8 overscroll-contain">
         {/* Header */}
         <div className="p-6 border-b border-[#E7E0D8] bg-white flex items-center justify-between">
           <div>
@@ -140,7 +180,7 @@ export function CheckoutModal() {
               Final Step
             </span>
             <h2 className="font-serif text-2xl font-bold text-[#1C1917] mt-1">
-              {deliveryType === "Delivery" ? "Delivery Details & Payment" : "Pickup Confirmation"}
+              Delivery Details & Confirmation
             </h2>
           </div>
           <button
@@ -152,7 +192,7 @@ export function CheckoutModal() {
         </div>
 
         {/* Content Form */}
-        <form onSubmit={handleSubmitOrder} className="p-6 sm:p-8 space-y-6 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmitOrder} className="p-6 sm:p-8 space-y-6 max-h-[80vh] overflow-y-auto overscroll-contain">
           {/* Customer Personal Details */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
@@ -196,174 +236,123 @@ export function CheckoutModal() {
           </div>
 
           {/* Delivery Address & Map Pin */}
-          {deliveryType === "Delivery" ? (
-            <div className="space-y-4 pt-4 border-t border-[#E7E0D8]">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
-                  2. Delivery Address & GPS Coordinates
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsAddAddressFlowOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FED7AA]/60 text-[#9A3412] text-xs font-semibold hover:bg-[#FED7AA] transition-all"
-                >
-                  <MapPin className="w-3.5 h-3.5 text-[#C2410C]" />
-                  <span>Select / Pin on Map</span>
-                </button>
-              </div>
+          <div className="space-y-4 pt-4 border-t border-[#E7E0D8]">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
+                2. Delivery Address
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddAddressFlowOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FED7AA]/60 text-[#9A3412] text-xs font-semibold hover:bg-[#FED7AA] transition-all"
+              >
+                <MapPin className="w-3.5 h-3.5 text-[#C2410C]" />
+                <span>Select / Pin on Map</span>
+              </button>
+            </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-[#1C1917] mb-1">
-                    House / Flat / Building No. *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={house}
-                    onChange={(e) => setHouse(e.target.value)}
-                    placeholder="e.g. Flat 402, Magnolia Towers"
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#1C1917] mb-1">
-                    Landmark / Directions
-                  </label>
-                  <input
-                    type="text"
-                    value={landmark}
-                    onChange={(e) => setLandmark(e.target.value)}
-                    placeholder="e.g. Near Monkey Bar, Opposite Gate 2"
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-semibold text-[#1C1917] mb-1">
-                    Street / Locality / Area *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={street}
-                    onChange={(e) => setStreet(e.target.value)}
-                    placeholder="e.g. 12th Main, HAL 2nd Stage, Indiranagar, Bengaluru"
-                    className="w-full px-4 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
-                  />
-                </div>
-              </div>
-
-              {/* Visual Map Pin Confirmation Card */}
-              {pinnedCoords && (
-                <div className="p-4 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#C2410C] text-white flex items-center justify-center shrink-0 shadow-xs">
-                      <MapPin className="w-5 h-5 animate-bounce" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-[#1C1917] flex items-center gap-1.5">
-                        <span>Pin Dropped:</span>
-                        <span className="font-mono text-[#C2410C]">
-                          {pinnedCoords.lat}° N, {pinnedCoords.lng}° E
-                        </span>
-                      </p>
-                      <p className="text-[11px] text-[#78716C]">
-                        GPS Precision ~{pinnedCoords.accuracy}m • Direct Google Maps routing enabled for rider
-                      </p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase shrink-0">
-                    Live Verified
-                  </span>
-                </div>
-              )}
-
-              {/* WhatsApp Consent Checkbox */}
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-white border border-[#E7E0D8] cursor-pointer hover:border-[#C2410C] transition-colors">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#1C1917] mb-1">
+                  House / Flat / Building No. *
+                </label>
                 <input
-                  type="checkbox"
-                  checked={whatsAppConsent}
-                  onChange={(e) => setWhatsAppConsent(e.target.checked)}
-                  className="mt-0.5 rounded border-gray-300 text-[#C2410C] focus:ring-[#C2410C]"
+                  type="text"
+                  required
+                  value={house}
+                  onChange={(e) => setHouse(e.target.value)}
+                  placeholder="e.g. Flat 402, Magnolia Towers"
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
                 />
-                <div className="text-xs">
-                  <span className="font-semibold text-[#1C1917] flex items-center gap-1.5">
-                    <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
-                    WhatsApp Live Delivery Updates
-                  </span>
-                  <p className="text-[#78716C] mt-0.5">
-                    I agree to receive live cooking alerts and share GPS location with the delivery rider via WhatsApp.
-                  </p>
-                </div>
-              </label>
-            </div>
-          ) : (
-            <div className="p-4 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#1C1917] flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-[#C2410C]" /> Kitchen Pickup Selected
-              </h4>
-              <p className="text-xs text-[#78716C]">
-                Your meal will be freshly prepared and kept in temperature-controlled artisan packaging at our counter:
-              </p>
-              <p className="text-xs font-semibold text-[#1C1917]">
-                The Red Löffel Kitchen, Suite 402, Artisan Lane, Indiranagar, Bengaluru - 560038
-              </p>
-            </div>
-          )}
+              </div>
 
-          {/* Payment Method Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-[#1C1917] mb-1">
+                  Landmark / Directions
+                </label>
+                <input
+                  type="text"
+                  value={landmark}
+                  onChange={(e) => setLandmark(e.target.value)}
+                  placeholder="e.g. Near Monkey Bar, Opposite Gate 2"
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-[#1C1917] mb-1">
+                  Street / Locality / Area *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={street}
+                  onChange={(e) => setStreet(e.target.value)}
+                  placeholder="e.g. 12th Main, HAL 2nd Stage, Indiranagar, Bengaluru"
+                  className="w-full px-4 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
+                />
+              </div>
+            </div>
+
+            {/* Delivery Pin Confirmation Card */}
+            {pinnedCoords && (
+              <div className="p-3.5 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#C2410C] text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-[#1C1917]">
+                      Delivery Location Confirmed
+                    </p>
+                    <p className="text-[11px] text-[#78716C]">
+                      Order will be dispatched directly to your address
+                    </p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase shrink-0">
+                  Confirmed
+                </span>
+              </div>
+            )}
+
+            {/* WhatsApp Consent Checkbox */}
+            <label className="flex items-start gap-3 p-3 rounded-xl bg-white border border-[#E7E0D8] cursor-pointer hover:border-[#C2410C] transition-colors">
+              <input
+                type="checkbox"
+                checked={whatsAppConsent}
+                onChange={(e) => setWhatsAppConsent(e.target.checked)}
+                className="mt-0.5 rounded border-gray-300 text-[#C2410C] focus:ring-[#C2410C]"
+              />
+              <div className="text-xs">
+                <span className="font-semibold text-[#1C1917] flex items-center gap-1.5">
+                  <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                  WhatsApp Order Updates
+                </span>
+                <p className="text-[#78716C] mt-0.5">
+                  I agree to receive live cooking and delivery status alerts via WhatsApp.
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {/* Payment Method Selector (Cash on Delivery Only) */}
           <div className="space-y-3 pt-4 border-t border-[#E7E0D8]">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
               3. Payment Method
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("Online UPI / Cards")}
-                className={`p-3.5 rounded-2xl border text-left flex items-start justify-between gap-3 transition-all ${
-                  paymentMethod === "Online UPI / Cards"
-                    ? "border-[#C2410C] bg-[#FFF7ED] ring-1 ring-[#C2410C]"
-                    : "border-[#E7E0D8] bg-white hover:border-[#1C1917]"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-[#C2410C]" />
-                    <span className="text-xs font-bold text-[#1C1917]">Online UPI / Cards</span>
-                  </div>
-                  <p className="text-[11px] text-[#78716C] mt-1">
-                    Google Pay, PhonePe, Cards, NetBanking (Instant Confirmation)
-                  </p>
+            <div className="p-4 rounded-2xl border border-[#C2410C] bg-[#FFF7ED] ring-1 ring-[#C2410C] flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Banknote className="w-4 h-4 text-[#C2410C]" />
+                  <span className="text-xs font-bold text-[#1C1917]">Cash on Delivery (COD)</span>
+                  <span className="text-[10px] bg-[#FED7AA] text-[#9A3412] px-2 py-0.5 rounded-full font-bold">Only Option Available</span>
                 </div>
-                {paymentMethod === "Online UPI / Cards" && (
-                  <CheckCircle2 className="w-4 h-4 text-[#C2410C] shrink-0" />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setPaymentMethod("Cash on Delivery (COD)")}
-                className={`p-3.5 rounded-2xl border text-left flex items-start justify-between gap-3 transition-all ${
-                  paymentMethod === "Cash on Delivery (COD)"
-                    ? "border-[#C2410C] bg-[#FFF7ED] ring-1 ring-[#C2410C]"
-                    : "border-[#E7E0D8] bg-white hover:border-[#1C1917]"
-                }`}
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Banknote className="w-4 h-4 text-[#C2410C]" />
-                    <span className="text-xs font-bold text-[#1C1917]">Cash on Delivery</span>
-                  </div>
-                  <p className="text-[11px] text-[#78716C] mt-1">
-                    Pay by Cash or UPI QR upon handoff by the delivery rider
-                  </p>
-                </div>
-                {paymentMethod === "Cash on Delivery (COD)" && (
-                  <CheckCircle2 className="w-4 h-4 text-[#C2410C] shrink-0" />
-                )}
-              </button>
+                <p className="text-[11px] text-[#78716C] mt-1">
+                  Pay with Cash or UPI scan upon food delivery at your door.
+                </p>
+              </div>
+              <CheckCircle2 className="w-5 h-5 text-[#C2410C] shrink-0" />
             </div>
           </div>
 
@@ -371,7 +360,7 @@ export function CheckoutModal() {
           <div className="p-4 rounded-2xl bg-white border border-[#E7E0D8] flex items-center justify-between">
             <div>
               <p className="text-[11px] text-[#78716C]">
-                Total Payable ({cart.length} items • incl. 5% GST {deliveryType === "Delivery" ? "+ delivery" : ""})
+                Total Payable ({cart.length} items • incl. ₹{packagingCharge} packaging{deliveryFee === 0 ? " • Free Delivery" : ""})
               </p>
               <p className="font-serif text-2xl font-bold text-[#1C1917]">₹{grandTotal}</p>
             </div>

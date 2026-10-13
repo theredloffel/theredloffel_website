@@ -47,6 +47,14 @@ body {
   width: 100%;
 }
 
+/* Modal open lock styles - guarantees back screen stays completely static */
+html.modal-open,
+body.modal-open {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  height: 100% !important;
+}
+
 /* Custom scrollbar for pill category lists and drawers */
 ::-webkit-scrollbar {
   width: 6px;

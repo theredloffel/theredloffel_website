@@ -21,6 +21,7 @@ export function Header() {
   const {
     setIsAuthOpen,
     setIsOrderHistoryOpen,
+    setSelectedTrackingOrderId,
     setIsLocationModalOpen,
     user,
     orders,
@@ -31,12 +32,16 @@ export function Header() {
     locationLabel,
     locationAddress,
     showToast,
+    isStoreOpen,
+    userOrders,
   } = useKitchen();
 
   const [isMicListening, setIsMicListening] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const activeOrdersCount = orders.filter((o) => o.status !== "Delivered").length;
+  const activeOrdersCount = user.isLoggedIn
+    ? userOrders.filter((o) => o.status !== "Delivered" && o.status !== "Rejected").length
+    : 0;
 
   React.useEffect(() => {
     const handleScroll = () => {
@@ -59,7 +64,7 @@ export function Header() {
   };
 
   return (
-    <header className="relative w-full z-40">
+    <header suppressHydrationWarning className="relative w-full z-40">
       {/* ========================================================= */}
       {/* DESKTOP HEADER (Fixed at top when scrolled) */}
       {/* ========================================================= */}
@@ -75,8 +80,16 @@ export function Header() {
         <div className="bg-[#1C1917] text-[#FAF8F5] text-xs px-4 py-1 font-medium justify-between items-center">
           <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="tracking-wide">Kitchen Open • Live Artisanal Orders Active</span>
+              <span
+                className={`inline-block w-2 h-2 rounded-full ${
+                  isStoreOpen ? "bg-emerald-500 animate-pulse" : "bg-rose-500"
+                }`}
+              ></span>
+              <span className="tracking-wide">
+                {isStoreOpen
+                  ? "Kitchen Open • Live Artisanal Orders Active"
+                  : "Kitchen Closed • Online Orders Currently Paused"}
+              </span>
             </div>
             <div className="flex items-center gap-4 text-[#D7CCC8]">
               <span className="flex items-center gap-1.5 text-[11px]">
@@ -191,7 +204,10 @@ export function Header() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setIsOrderHistoryOpen(true)}
+                    onClick={() => {
+                      setSelectedTrackingOrderId(null);
+                      setIsOrderHistoryOpen(true);
+                    }}
                     className="relative p-2 rounded-xl text-xs font-semibold text-[#78716C] hover:text-[#1C1917] hover:bg-white transition-colors"
                     title="Order History"
                   >
@@ -260,10 +276,14 @@ export function Header() {
               onClick={() => setIsLocationModalOpen(true)}
               className="flex-1 min-w-0 text-left px-2 py-0.5 rounded-xl hover:bg-[#F5EFEB]/80 transition-colors"
             >
-              <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#C2410C]">
-                <Clock className="w-3 h-3 text-[#C2410C] shrink-0" />
-                <span>OPEN TILL 11:45 PM</span>
-                <span className="text-[#A8A29E] font-normal">• 30m</span>
+              <div
+                className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider ${
+                  isStoreOpen ? "text-[#C2410C]" : "text-rose-600"
+                }`}
+              >
+                <Clock className="w-3 h-3 shrink-0" />
+                <span>{isStoreOpen ? "OPEN" : "STORE CLOSED"}</span>
+                {isStoreOpen && <span className="text-[#A8A29E] font-normal">• 30m</span>}
               </div>
 
               <div className="flex items-center gap-1 mt-0.5">
@@ -277,17 +297,24 @@ export function Header() {
 
             {/* 3. USER PROFILE / SIGN IN */}
             <div className="flex items-center gap-1.5 shrink-0">
-              <Link
-                href="/profile"
-                className="w-10 h-10 rounded-full bg-[#1C1917] text-white flex items-center justify-center hover:bg-black transition-colors shadow-2xs"
-                title="Account / Profile"
-              >
-                {user.isLoggedIn ? (
+              {user.isLoggedIn ? (
+                <Link
+                  href="/profile"
+                  className="w-10 h-10 rounded-full bg-[#1C1917] text-white flex items-center justify-center hover:bg-black transition-colors shadow-2xs"
+                  title="Account / Profile"
+                >
                   <UserCheck className="w-4 h-4 text-emerald-400" />
-                ) : (
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsAuthOpen(true)}
+                  className="w-10 h-10 rounded-full bg-[#1C1917] text-white flex items-center justify-center hover:bg-black transition-colors shadow-2xs active:scale-95"
+                  title="Sign In / Register"
+                >
                   <User className="w-4 h-4 text-[#FAF8F5]" />
-                )}
-              </Link>
+                </button>
+              )}
             </div>
           </div>
         </div>

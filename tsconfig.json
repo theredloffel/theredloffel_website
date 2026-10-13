@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@backend": ["./backend/index.ts"],
+      "@backend/*": ["./backend/*"]
     }
   },
   "include": [

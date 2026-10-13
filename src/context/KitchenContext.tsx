@@ -1,8 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
-import { MenuItem, CartItem, Order, OrderStatus, Rider, UserProfile, OrderAddress, WhatsAppStatus, Category, SavedLocation } from "@/types";
-import { INITIAL_MENU_ITEMS, INITIAL_ORDERS, RIDERS } from "@/data/mockData";
+import { MenuItem, CartItem, Order, OrderStatus, Rider, UserProfile, OrderAddress, WhatsAppStatus, Category, SavedLocation, Coupon } from "@/types";
+import { INITIAL_MENU_ITEMS, INITIAL_ORDERS, RIDERS, INITIAL_COUPONS, DEFAULT_DELIVERY_CHARGE } from "@/data/mockData";
+import { orderService, menuService, couponService, settingsService } from "@backend";
 
 export interface ToastMessage {
   id: string;
@@ -33,10 +34,24 @@ interface KitchenContextType {
   setCookingNotes: (notes: string) => void;
   deliveryFee: number;
   tax: number;
+  packagingCharge: number;
   grandTotal: number;
+
+  // Delivery Fee & Coupons
+  baseDeliveryCharge: number;
+  updateBaseDeliveryCharge: (charge: number) => void;
+  coupons: Coupon[];
+  addCoupon: (coupon: Omit<Coupon, "id">) => void;
+  removeCoupon: (couponId: string) => void;
+  toggleCouponStatus: (couponId: string) => void;
+  appliedCoupon: Coupon | null;
+  applyCoupon: (couponCode: string) => { success: boolean; message: string };
+  removeAppliedCoupon: () => void;
+  couponDiscount: number;
 
   // Orders
   orders: Order[];
+  userOrders: Order[];
   placeOrder: (details: {
     customerName: string;
     customerPhone: string;
@@ -44,8 +59,8 @@ interface KitchenContextType {
     paymentMethod: "Cash on Delivery (COD)" | "Online UPI / Cards";
     whatsAppOptIn: boolean;
   }) => Order;
-  updateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
-  assignRider: (orderId: string, riderId: string) => void;
+  updateOrderStatus: (orderId: string, newStatus: OrderStatus, rejectionReason?: string, silent?: boolean) => void;
+  assignRider: (orderId: string, riderId: string, silent?: boolean) => void;
   sendRiderWhatsApp: (orderId: string) => void;
   retryWhatsApp: (orderId: string) => void;
 
@@ -68,6 +83,8 @@ interface KitchenContextType {
   setIsOrderHistoryOpen: (open: boolean) => void;
   selectedTrackingOrderId: string | null;
   setSelectedTrackingOrderId: (id: string | null) => void;
+  activeOrderId: string | null;
+  setActiveOrderId: (id: string | null) => void;
   isLocationModalOpen: boolean;
   setIsLocationModalOpen: (open: boolean) => void;
   isMapPickerOpen: boolean;
@@ -88,6 +105,15 @@ interface KitchenContextType {
   addSavedLocation: (location: { label: string; address: string; detail?: string }) => void;
   removeSavedLocation: (id: string) => void;
 
+  // Store Operational Status
+  isStoreOpen: boolean;
+  setIsStoreOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
+  toggleStoreOpen: () => void;
+
+  // Admin Order Search
+  adminOrderSearch: string;
+  setAdminOrderSearch: (query: string) => void;
+
   // Notifications
   toasts: ToastMessage[];
   showToast: (message: string, type?: "success" | "info" | "warning") => void;
@@ -105,9 +131,9 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   const [cookingNotes, setCookingNotes] = useState<string>("");
 
   const [user, setUser] = useState<UserProfile>({
-    name: "Aditya Roy",
-    phone: "6297673521",
-    isLoggedIn: true,
+    name: "",
+    phone: "",
+    isLoggedIn: false,
     defaultAddress: {
       house: "raghuma boys hostel block c",
       street: "near sharda university",
@@ -124,6 +150,7 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isOrderHistoryOpen, setIsOrderHistoryOpen] = useState(false);
   const [selectedTrackingOrderId, setSelectedTrackingOrderId] = useState<string | null>(null);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isMapPickerOpen, setIsMapPickerOpen] = useState(false);
   const [mapPickerCallback, setMapPickerCallback] = useState<((loc: { label: string; address: string; detail?: string }) => void) | null>(null);
@@ -140,6 +167,25 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   const [isVegOnly, setIsVegOnly] = useState(false);
   const [locationLabel, setLocationLabel] = useState("HOME");
   const [locationAddress, setLocationAddress] = useState("raghuma boys hostel block c, near sharda university, Knowledge Park III, Greater Noida");
+
+  // Admin Search & Store Open Status
+  const [isStoreOpen, setIsStoreOpen] = useState(true);
+  const [adminOrderSearch, setAdminOrderSearch] = useState("");
+
+  const toggleStoreOpen = () => {
+    setIsStoreOpen((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("lebistro_store_open", String(next));
+      } catch {}
+      settingsService.updateStoreOpen(next);
+      showToast(
+        next ? "Store is now OPEN for online orders!" : "Store is now CLOSED. Orders paused.",
+        next ? "success" : "warning"
+      );
+      return next;
+    });
+  };
 
   const [savedLocations, setSavedLocations] = useState<SavedLocation[]>([
     {
@@ -166,10 +212,33 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const savedUser = localStorage.getItem("lebistro_user");
-      if (savedUser) setUser(JSON.parse(savedUser));
+      let currentUserPhone = "";
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        setUser(parsed);
+        if (parsed.isLoggedIn && parsed.phone) {
+          currentUserPhone = parsed.phone.replace(/\D/g, "");
+        }
+      }
 
-      const savedCart = localStorage.getItem("lebistro_cart");
-      if (savedCart) setCart(JSON.parse(savedCart));
+      // ONLY restore active order ID and cart if user IS actually logged in!
+      if (currentUserPhone) {
+        const storedActiveOrderId = localStorage.getItem("lebistro_active_order_id");
+        if (storedActiveOrderId) setActiveOrderId(storedActiveOrderId);
+
+        const savedUserCart =
+          localStorage.getItem(`lebistro_cart_${currentUserPhone}`) ||
+          localStorage.getItem("lebistro_cart");
+        if (savedUserCart) setCart(JSON.parse(savedUserCart));
+      } else {
+        // If not logged in, ensure activeOrderId and cart are completely cleared
+        setActiveOrderId(null);
+        setSelectedTrackingOrderId(null);
+        try {
+          localStorage.removeItem("lebistro_active_order_id");
+          localStorage.removeItem("lebistro_cart");
+        } catch {}
+      }
 
       const savedOrders = localStorage.getItem("lebistro_orders");
       if (savedOrders) setOrders(JSON.parse(savedOrders));
@@ -179,9 +248,101 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
 
       const storedLocations = localStorage.getItem("lebistro_saved_locations");
       if (storedLocations) setSavedLocations(JSON.parse(storedLocations));
+
+      const storedStoreOpen = localStorage.getItem("lebistro_store_open");
+      if (storedStoreOpen !== null) setIsStoreOpen(storedStoreOpen === "true");
     } catch {
       // Fallback to defaults
     }
+  }, []);
+
+  // Load live data from Backend & listen for real-time WebSocket updates
+  useEffect(() => {
+    let isMounted = true;
+
+    // 1. Initial Backend Data Fetch
+    const loadBackendData = async () => {
+      // Orders
+      const { orders: remoteOrders } = await orderService.fetchOrders();
+      if (isMounted && remoteOrders.length > 0) {
+        setOrders(remoteOrders);
+      }
+
+      // Menu
+      const { items: remoteMenu } = await menuService.fetchMenuItems();
+      if (isMounted && remoteMenu.length > 0) {
+        setMenuItems(remoteMenu);
+      }
+
+      // Coupons
+      const { coupons: remoteCoupons } = await couponService.fetchCoupons();
+      if (isMounted && remoteCoupons.length > 0) {
+        setCoupons(remoteCoupons);
+      }
+
+      // Settings
+      const { baseDeliveryCharge: remoteFee, isStoreOpen: remoteStoreState } =
+        await settingsService.fetchSettings();
+      if (isMounted) {
+        if (remoteFee !== undefined) setBaseDeliveryCharge(remoteFee);
+        if (remoteStoreState !== undefined) setIsStoreOpen(remoteStoreState);
+      }
+    };
+
+    loadBackendData();
+
+    // 2. Real-time Subscriptions through Backend Services
+    const unsubOrders = orderService.subscribeToOrders({
+      onInsert: (newOrder) => {
+        if (!isMounted) return;
+        setOrders((prev) => {
+          if (prev.some((o) => o.id === newOrder.id)) return prev;
+          return [newOrder, ...prev];
+        });
+      },
+      onUpdate: (updatedOrder) => {
+        if (!isMounted) return;
+        setOrders((prev) =>
+          prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
+        );
+      },
+      onDelete: (deletedId) => {
+        if (!isMounted) return;
+        setOrders((prev) => prev.filter((o) => o.id !== deletedId));
+      },
+    });
+
+    const unsubMenu = menuService.subscribeToMenu({
+      onChange: async () => {
+        const { items } = await menuService.fetchMenuItems();
+        if (isMounted && items.length > 0) setMenuItems(items);
+      },
+    });
+
+    const unsubCoupons = couponService.subscribeToCoupons({
+      onChange: async () => {
+        const { coupons: latest } = await couponService.fetchCoupons();
+        if (isMounted && latest.length > 0) setCoupons(latest);
+      },
+    });
+
+    const unsubSettings = settingsService.subscribeToSettings({
+      onChange: async () => {
+        const { baseDeliveryCharge: fee, isStoreOpen: open } = await settingsService.fetchSettings();
+        if (isMounted) {
+          if (fee !== undefined) setBaseDeliveryCharge(fee);
+          if (open !== undefined) setIsStoreOpen(open);
+        }
+      },
+    });
+
+    return () => {
+      isMounted = false;
+      unsubOrders();
+      unsubMenu();
+      unsubCoupons();
+      unsubSettings();
+    };
   }, []);
 
   // Save changes
@@ -194,8 +355,14 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       localStorage.setItem("lebistro_cart", JSON.stringify(cart));
+      if (user.isLoggedIn && user.phone) {
+        const cleanPhone = user.phone.replace(/\D/g, "");
+        if (cleanPhone) {
+          localStorage.setItem(`lebistro_cart_${cleanPhone}`, JSON.stringify(cart));
+        }
+      }
     } catch {}
-  }, [cart]);
+  }, [cart, user.isLoggedIn, user.phone]);
 
   useEffect(() => {
     try {
@@ -208,6 +375,44 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("lebistro_menu", JSON.stringify(menuItems));
     } catch {}
   }, [menuItems]);
+
+  // Freeze background scrolling whenever any modal, drawer, or slide-over is open
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const isAnyModalOpen =
+      isCartOpen ||
+      isOrderHistoryOpen ||
+      isCheckoutOpen ||
+      isAuthOpen ||
+      isLocationModalOpen ||
+      isMapPickerOpen;
+
+    if (isAnyModalOpen) {
+      document.documentElement.classList.add("modal-open");
+      document.body.classList.add("modal-open");
+      document.body.style.overflow = "hidden";
+      document.documentElement.style.overflow = "hidden";
+      return () => {
+        document.documentElement.classList.remove("modal-open");
+        document.body.classList.remove("modal-open");
+        document.body.style.overflow = "";
+        document.documentElement.style.overflow = "";
+      };
+    } else {
+      document.documentElement.classList.remove("modal-open");
+      document.body.classList.remove("modal-open");
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+    }
+  }, [
+    isCartOpen,
+    isOrderHistoryOpen,
+    isCheckoutOpen,
+    isAuthOpen,
+    isLocationModalOpen,
+    isMapPickerOpen,
+  ]);
 
   const showToast = (message: string, type: "success" | "info" | "warning" = "success") => {
     const id = Date.now().toString() + Math.random().toString().slice(2, 6);
@@ -258,6 +463,13 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
 
   const clearCart = () => {
     setCart([]);
+    try {
+      localStorage.removeItem("lebistro_cart");
+      if (user.phone) {
+        const clean = user.phone.replace(/\D/g, "");
+        if (clean) localStorage.removeItem(`lebistro_cart_${clean}`);
+      }
+    } catch {}
   };
 
   const cartCount = useMemo(() => {
@@ -268,9 +480,173 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     return cart.reduce((acc, curr) => acc + curr.item.price * curr.quantity, 0);
   }, [cart]);
 
-  const deliveryFee = deliveryType === "Delivery" ? 40 : 0;
-  const tax = Math.round(cartSubtotal * 0.05 * 10) / 10;
-  const grandTotal = cartSubtotal > 0 ? cartSubtotal + tax + deliveryFee : 0;
+  // Delivery Fee Management
+  const [baseDeliveryCharge, setBaseDeliveryCharge] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("lebistro_delivery_charge");
+      if (saved) return Number(saved);
+    }
+    return DEFAULT_DELIVERY_CHARGE;
+  });
+
+  const updateBaseDeliveryCharge = (charge: number) => {
+    const val = Math.max(0, Math.round(charge));
+    setBaseDeliveryCharge(val);
+    try {
+      localStorage.setItem("lebistro_delivery_charge", String(val));
+    } catch {}
+    settingsService.updateDeliveryCharge(val);
+    showToast(`Base delivery charge updated to ₹${val}`, "success");
+  };
+
+  // Coupons Management
+  const [coupons, setCoupons] = useState<Coupon[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("lebistro_coupons");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {}
+      }
+    }
+    return INITIAL_COUPONS;
+  });
+
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+
+  const saveCoupons = (newCoupons: Coupon[]) => {
+    setCoupons(newCoupons);
+    try {
+      localStorage.setItem("lebistro_coupons", JSON.stringify(newCoupons));
+    } catch {}
+  };
+
+  const addCoupon = (couponData: Omit<Coupon, "id">) => {
+    const newCoupon: Coupon = {
+      ...couponData,
+      id: `cp-${Date.now()}`,
+      code: couponData.code.toUpperCase().trim(),
+    };
+    const updated = [newCoupon, ...coupons];
+    saveCoupons(updated);
+    couponService.addCoupon(newCoupon);
+    showToast(`Coupon ${newCoupon.code} added successfully!`, "success");
+  };
+
+  const removeCoupon = (couponId: string) => {
+    const target = coupons.find((c) => c.id === couponId);
+    if (target?.isDefault) {
+      showToast("Default coupon cannot be deleted.", "warning");
+      return;
+    }
+    const updated = coupons.filter((c) => c.id !== couponId);
+    saveCoupons(updated);
+    if (appliedCoupon?.id === couponId) {
+      setAppliedCoupon(null);
+    }
+    couponService.removeCoupon(couponId);
+    showToast(`Coupon removed.`, "info");
+  };
+
+  const toggleCouponStatus = (couponId: string) => {
+    let targetState = false;
+    const updated = coupons.map((c) => {
+      if (c.id === couponId) {
+        targetState = !c.isActive;
+        return { ...c, isActive: targetState };
+      }
+      return c;
+    });
+    saveCoupons(updated);
+    couponService.toggleCouponStatus(couponId, targetState);
+    showToast("Coupon status updated", "info");
+  };
+
+  const applyCoupon = (code: string): { success: boolean; message: string } => {
+    const clean = code.trim().toUpperCase();
+    const found = coupons.find((c) => c.code.toUpperCase() === clean && c.isActive);
+
+    if (!found) {
+      showToast("Invalid or inactive coupon code", "warning");
+      return { success: false, message: "Invalid or inactive coupon code" };
+    }
+
+    if (cartSubtotal < found.minOrderAmount) {
+      const msg = `Minimum order of ₹${found.minOrderAmount} required for ${found.code}`;
+      showToast(msg, "warning");
+      return {
+        success: false,
+        message: msg,
+      };
+    }
+
+    setAppliedCoupon(found);
+    showToast(`Coupon ${found.code} applied successfully!`, "success");
+    return {
+      success: true,
+      message: `Coupon ${found.code} applied!`,
+    };
+  };
+
+  const removeAppliedCoupon = () => {
+    setAppliedCoupon(null);
+    showToast("Coupon removed", "info");
+  };
+
+  // Coupon discount calculation
+  const couponDiscount = useMemo(() => {
+    if (!appliedCoupon || cartSubtotal === 0) return 0;
+    if (cartSubtotal < appliedCoupon.minOrderAmount) return 0;
+
+    if (appliedCoupon.discountType === "flat") {
+      return Math.min(appliedCoupon.discountValue, cartSubtotal);
+    }
+    if (appliedCoupon.discountType === "percentage") {
+      const disc = Math.round(cartSubtotal * (appliedCoupon.discountValue / 100));
+      return appliedCoupon.maxDiscount ? Math.min(disc, appliedCoupon.maxDiscount) : disc;
+    }
+    return 0;
+  }, [appliedCoupon, cartSubtotal]);
+
+  // Packaging charges: flat ₹7 when cart has items (replaces tax/gst per requirement)
+  const packagingCharge = cartSubtotal > 0 ? 7 : 0;
+  const tax = 0;
+
+  // Delivery fee calculation
+  // Free delivery is NOT automatically applied above 199.
+  // It ONLY applies when user explicitly applies a free delivery coupon (e.g. FREE199) and cart meets minOrderAmount.
+  const deliveryFee = useMemo(() => {
+    if (cartSubtotal === 0 || deliveryType === "Pickup") return 0;
+
+    // Free delivery ONLY applies if user explicitly applied a free delivery coupon AND subtotal meets minOrderAmount
+    if (
+      appliedCoupon &&
+      appliedCoupon.discountType === "free_delivery" &&
+      cartSubtotal >= appliedCoupon.minOrderAmount
+    ) {
+      return 0;
+    }
+
+    return baseDeliveryCharge;
+  }, [cartSubtotal, deliveryType, appliedCoupon, baseDeliveryCharge]);
+
+  const grandTotal =
+    cartSubtotal > 0
+      ? Math.max(0, cartSubtotal - couponDiscount) + packagingCharge + deliveryFee
+      : 0;
+
+  // Filtered orders belonging ONLY to currently active logged-in customer
+  const userOrders = useMemo(() => {
+    if (!user.isLoggedIn || !user.phone) {
+      return [];
+    }
+    const cleanUserPhone = user.phone.replace(/\D/g, "");
+    if (!cleanUserPhone) return [];
+    return orders.filter((o) => {
+      const cleanOPhone = o.customerPhone.replace(/\D/g, "");
+      return cleanOPhone.endsWith(cleanUserPhone) || cleanUserPhone.endsWith(cleanOPhone);
+    });
+  }, [orders, user.isLoggedIn, user.phone]);
 
   // Order placement
   const placeOrder = (details: {
@@ -286,6 +662,8 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     const newOrder: Order = {
       id: newOrderId,
       createdAt: "Just now",
+      createdTimestamp: Date.now(),
+      date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
       customerName: details.customerName,
       customerPhone: details.customerPhone,
       orderType: deliveryType,
@@ -297,10 +675,11 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         dietary: ci.item.dietary,
       })),
       subtotal: cartSubtotal,
-      tax,
+      packagingCharge,
+      tax: 0,
       deliveryFee,
       total: grandTotal,
-      status: "Pending",
+      status: "Order Received",
       cookingNotes: cookingNotes.trim() || undefined,
       address: deliveryType === "Delivery" ? details.address : undefined,
       paymentMethod: details.paymentMethod,
@@ -311,24 +690,56 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     };
 
     setOrders((prev) => [newOrder, ...prev]);
+
+    // Asynchronously sync to Backend
+    orderService.createOrder(newOrder);
     clearCart();
     setCookingNotes("");
+    setAppliedCoupon(null);
+    setActiveOrderId(newOrderId);
+    try {
+      localStorage.setItem("lebistro_active_order_id", newOrderId);
+    } catch {
+      // storage unavailable
+    }
     setSelectedTrackingOrderId(newOrderId);
     setIsCheckoutOpen(false);
     setIsCartOpen(false);
-    setIsOrderHistoryOpen(true);
+    setIsOrderHistoryOpen(false);
     showToast(`Order #${newOrderId} placed successfully!`, "success");
 
     return newOrder;
   };
 
-  const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
+  const updateOrderStatus = (
+    orderId: string,
+    newStatus: OrderStatus,
+    rejectionReason?: string,
+    silent: boolean = false
+  ) => {
     setOrders((prev) =>
       prev.map((order) => {
         if (order.id === orderId) {
           const updated: Order = { ...order, status: newStatus };
+          if (newStatus === "Rejected") {
+            updated.rejectionReason = rejectionReason || "out of stock";
+          }
+          // Record acceptance timestamp for FIFO priority in Confirmed Orders
+          if (
+            (newStatus === "Order Status" || newStatus === "Order Accepted" || newStatus === "Preparing") &&
+            !order.acceptedTimestamp
+          ) {
+            updated.acceptedTimestamp = Date.now();
+          }
+          // Record dispatch timestamp for FIFO priority in On Road Orders
+          if (
+            (newStatus === "In the Road" || newStatus === "Out for Delivery") &&
+            !order.inRoadTimestamp
+          ) {
+            updated.inRoadTimestamp = Date.now();
+          }
           // If advancing status and rider is assigned
-          if (newStatus === "Out for Delivery" && !order.riderId) {
+          if ((newStatus === "In the Road" || newStatus === "Out for Delivery") && !order.riderId) {
             updated.riderId = "rider-1";
           }
           return updated;
@@ -336,17 +747,35 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         return order;
       })
     );
-    showToast(`Order #${orderId} marked as ${newStatus}`, "info");
+
+    // Asynchronously update status in Backend
+    orderService.updateOrderStatus(orderId, newStatus, rejectionReason);
+    if (newStatus === "Delivered" || newStatus === "Rejected") {
+      setActiveOrderId((curr) => (curr === orderId ? null : curr));
+      try {
+        localStorage.removeItem("lebistro_active_order_id");
+      } catch {}
+    }
+    if (!silent) {
+      if (newStatus === "Rejected") {
+        showToast(`Order #${orderId} rejected: ${rejectionReason || "out of stock"}`, "warning");
+      } else {
+        showToast(`Order #${orderId} marked as ${newStatus}`, "info");
+      }
+    }
   };
 
-  const assignRider = (orderId: string, riderId: string) => {
+  const assignRider = (orderId: string, riderId: string, silent: boolean = false) => {
     const rider = riders.find((r) => r.id === riderId);
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, riderId } : o))
     );
-    if (rider) {
-      showToast(`Assigned ${rider.name} to order #${orderId}`);
+    if (rider && !silent) {
+      showToast(`Assigned ${rider.name} to order #${orderId}`, "info");
     }
+
+    // Asynchronously update assigned rider in Backend
+    orderService.assignRider(orderId, riderId);
   };
 
   const sendRiderWhatsApp = (orderId: string) => {
@@ -355,7 +784,22 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     const rider = riders.find((r) => r.id === order.riderId);
     const riderName = rider ? rider.name : "Rider";
 
-    // Simulate WhatsApp dispatch
+    // Trigger Real WhatsApp Notification to Customer
+    const cleanPhone = (order.customerPhone || "").replace(/\D/g, "");
+    if (cleanPhone) {
+      fetch("/api/whatsapp/send-notification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          orderId: order.id,
+          status: "OUT_FOR_DELIVERY",
+          riderName: rider?.name,
+          riderPhone: rider?.phone,
+        }),
+      }).catch((e) => console.error("WhatsApp dispatch alert failed:", e));
+    }
+
     setOrders((prev) =>
       prev.map((o) =>
         o.id === orderId
@@ -385,6 +829,7 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       prev.map((item) => {
         if (item.id === itemId) {
           const updatedState = !item.isAvailable;
+          menuService.toggleAvailability(itemId, updatedState);
           showToast(
             `${item.name} is now ${updatedState ? "In Stock" : "Out of Stock"}`,
             updatedState ? "success" : "warning"
@@ -400,6 +845,7 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     setMenuItems((prev) =>
       prev.map((item) => (item.id === itemId ? { ...item, price: newPrice } : item))
     );
+    menuService.updateItemPrice(itemId, newPrice);
     showToast(`Price updated to ₹${newPrice}`, "info");
   };
 
@@ -407,6 +853,7 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     setMenuItems((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
     );
+    menuService.updateItemDetails(updatedItem);
     showToast(`Dish details updated for ${updatedItem.name}`, "success");
   };
 
@@ -446,17 +893,83 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
 
   // User auth
   const loginWithPhone = (phone: string, name?: string) => {
+    const cleanPhone = phone.replace(/\D/g, "");
     setUser({
-      name: name || "Gourmet Member",
+      name: name || user.name || "Gourmet Member",
       phone: phone,
       isLoggedIn: true,
       defaultAddress: user.defaultAddress,
     });
+
+    // 1. Restore this specific user's saved cart from localStorage if exists
+    try {
+      const savedUserCart = localStorage.getItem(`lebistro_cart_${cleanPhone}`);
+      if (savedUserCart) {
+        const parsed = JSON.parse(savedUserCart);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setCart(parsed);
+        }
+      }
+    } catch {}
+
+    // 2. Restore active order for this specific user
+    const userActive = orders.find((o) => {
+      const cleanOPhone = o.customerPhone.replace(/\D/g, "");
+      return (
+        (cleanOPhone.endsWith(cleanPhone) || cleanPhone.endsWith(cleanOPhone)) &&
+        o.status !== "Delivered" &&
+        o.status !== "Rejected"
+      );
+    });
+
+    if (userActive) {
+      setActiveOrderId(userActive.id);
+      try {
+        localStorage.setItem("lebistro_active_order_id", userActive.id);
+      } catch {}
+    } else {
+      setActiveOrderId(null);
+      try {
+        localStorage.removeItem("lebistro_active_order_id");
+      } catch {}
+    }
+
     showToast(`Logged in successfully with +91 ${phone}!`, "success");
   };
 
   const logout = () => {
-    setUser((prev) => ({ ...prev, isLoggedIn: false }));
+    // 1. Save user's current cart under their phone key before logout
+    if (user.phone) {
+      const cleanPhone = user.phone.replace(/\D/g, "");
+      if (cleanPhone) {
+        try {
+          localStorage.setItem(`lebistro_cart_${cleanPhone}`, JSON.stringify(cart));
+        } catch {}
+      }
+    }
+
+    // 2. Clear user profile
+    setUser({
+      name: "",
+      phone: "",
+      isLoggedIn: false,
+      defaultAddress: undefined,
+    });
+
+    // 3. Clear cart and active order tracking for the logged-out state
+    setCart([]);
+    setAppliedCoupon(null);
+    setCookingNotes("");
+    setActiveOrderId(null);
+    setSelectedTrackingOrderId(null);
+
+    // 4. Remove active session storage keys
+    try {
+      localStorage.removeItem("lebistro_user");
+      localStorage.removeItem("lebistro_cart");
+      localStorage.removeItem("lebistro_active_order_id");
+    } catch {}
+
     showToast("Logged out successfully", "info");
   };
 
@@ -482,8 +995,20 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         setCookingNotes,
         deliveryFee,
         tax,
+        packagingCharge,
         grandTotal,
+        baseDeliveryCharge,
+        updateBaseDeliveryCharge,
+        coupons,
+        addCoupon,
+        removeCoupon,
+        toggleCouponStatus,
+        appliedCoupon,
+        applyCoupon,
+        removeAppliedCoupon,
+        couponDiscount,
         orders,
+        userOrders,
         placeOrder,
         updateOrderStatus,
         assignRider,
@@ -503,6 +1028,8 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         setIsOrderHistoryOpen,
         selectedTrackingOrderId,
         setSelectedTrackingOrderId,
+        activeOrderId,
+        setActiveOrderId,
         isLocationModalOpen,
         setIsLocationModalOpen,
         isMapPickerOpen,
@@ -520,6 +1047,11 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         savedLocations,
         addSavedLocation,
         removeSavedLocation,
+        isStoreOpen,
+        setIsStoreOpen,
+        toggleStoreOpen,
+        adminOrderSearch,
+        setAdminOrderSearch,
         toasts,
         showToast,
       }}

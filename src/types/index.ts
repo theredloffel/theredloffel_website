@@ -32,11 +32,16 @@ export interface CartItem {
 }
 
 export type OrderStatus = 
+  | "Order Received"
+  | "Order Status"
+  | "Order Accepted"
+  | "In the Road"
+  | "Delivered"
+  | "Rejected"
   | "Pending" 
   | "Preparing" 
   | "Ready" 
-  | "Out for Delivery" 
-  | "Delivered";
+  | "Out for Delivery";
 
 export type WhatsAppStatus = "Sent" | "Delivered" | "Read" | "Failed";
 
@@ -69,15 +74,21 @@ export interface OrderItemDetail {
 export interface Order {
   id: string;
   createdAt: string;
+  createdTimestamp?: number;
+  acceptedTimestamp?: number;
+  inRoadTimestamp?: number;
+  date?: string;
   customerName: string;
   customerPhone: string;
   orderType: "Delivery" | "Pickup";
   items: OrderItemDetail[];
   subtotal: number;
-  tax: number;
+  tax?: number;
+  packagingCharge?: number;
   deliveryFee: number;
   total: number;
   status: OrderStatus;
+  rejectionReason?: string;
   cookingNotes?: string;
   address?: OrderAddress;
   riderId?: string;
@@ -100,5 +111,20 @@ export interface SavedLocation {
   label: string;
   address: string;
   detail?: string;
+}
+
+export type DiscountType = "free_delivery" | "flat" | "percentage";
+
+export interface Coupon {
+  id: string;
+  code: string;
+  title: string;
+  description: string;
+  discountType: DiscountType;
+  discountValue: number;
+  minOrderAmount: number;
+  maxDiscount?: number;
+  isActive: boolean;
+  isDefault?: boolean;
 }
 

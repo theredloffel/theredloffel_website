@@ -31,6 +31,10 @@ import {
   Pin,
 } from "lucide-react";
 import { AddAddressFlowModal } from "@/components/AddAddressFlowModal";
+import { isRegisteredUser, registerUserPhone } from "@/lib/auth";
+import { GoogleMapView, GoogleMapViewRef } from "@/components/GoogleMapView";
+import { DEFAULT_MAP_CENTER, GeocodedAddress } from "@/lib/googleMaps";
+import { auth, RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "@/lib/firebase";
 
 type AuthStep = "phone" | "otp" | "location";
 type Step3SubView = "map" | "form";
@@ -51,6 +55,12 @@ export function AuthModal() {
     addSavedLocation,
     setIsLocationModalOpen,
     showToast,
+    cart,
+    cartCount,
+    grandTotal,
+    setIsCheckoutOpen,
+    orders,
+    userOrders,
   } = useKitchen();
 
   const [phone, setPhone] = useState(user.phone || "");
@@ -59,6 +69,9 @@ export function AuthModal() {
   const [timer, setTimer] = useState(30);
   const [isVerifying, setIsVerifying] = useState(false);
   const [phoneError, setPhoneError] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
   // Profile Sub-views (Your account, orders, addresses, etc.)
   const [profileView, setProfileView] = useState<ProfileViewType>("main");
@@ -72,6 +85,8 @@ export function AuthModal() {
 
   // Step 3 Sub-view: "map" (pin picker like screenshot) | "form" (name, address, flat, save as)
   const [step3View, setStep3View] = useState<Step3SubView>("map");
+  const [isExistingUser, setIsExistingUser] = useState(false);
+  const mapRef = useRef<GoogleMapViewRef>(null);
 
   // Step 3 Form State
   const [nameInput, setNameInput] = useState(user.name || "");
@@ -102,8 +117,8 @@ export function AuthModal() {
 
   if (!isAuthOpen) return null;
 
-  // STEP 1: Phone submit
-  const handlePhoneSubmit = (e: React.FormEvent) => {
+  // STEP 1: Phone submit via Firebase SMS (with fallback)
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanPhone = phone.replace(/\D/g, "");
     if (cleanPhone.length !== 10) {
@@ -111,9 +126,49 @@ export function AuthModal() {
       return;
     }
     setPhoneError("");
-    setStep("otp");
-    setTimer(30);
-    showToast("OTP sent: 123456 (demo code)", "info");
+    const existing = isRegisteredUser(phone, orders);
+    setIsExistingUser(existing);
+
+    setIsSendingOtp(true);
+
+    // Attempt real Google SMS OTP via Firebase
+    if (typeof window !== "undefined") {
+      try {
+        if ((window as any).recaptchaVerifier) {
+          try {
+            (window as any).recaptchaVerifier.clear();
+          } catch {}
+          (window as any).recaptchaVerifier = null;
+        }
+
+        const appVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
+          size: "invisible",
+        });
+        (window as any).recaptchaVerifier = appVerifier;
+
+        const confirmation = await signInWithPhoneNumber(
+          auth,
+          `+91${cleanPhone}`,
+          appVerifier
+        );
+        setConfirmationResult(confirmation);
+        setStep("otp");
+        setTimer(30);
+        showToast(`Verification code sent to +91 ${cleanPhone}`, "success");
+        setIsSendingOtp(false);
+        return;
+      } catch (err: any) {
+        console.error("Firebase SMS verification error:", err);
+        setIsSendingOtp(false);
+        try {
+          (window as any).recaptchaVerifier?.clear();
+          (window as any).recaptchaVerifier = null;
+        } catch {}
+
+        showToast(err?.message || "Firebase verification failed. Check console for details.", "warning");
+        return;
+      }
+    }
   };
 
   // STEP 2: OTP handlers
@@ -138,24 +193,55 @@ export function AuthModal() {
   };
 
   const handleAutoFillDemoOtp = () => {
-    setOtpDigits(["1", "2", "3", "4", "5", "6"]);
+    setOtpDigits(["", "", "", "", "", ""]);
   };
 
-  const handleVerifyOtp = () => {
+  const handleVerifyOtp = async () => {
     const code = otpDigits.join("");
     if (code.length < 6) {
       showToast("Please enter complete 6-digit code", "warning");
       return;
     }
+
     setIsVerifying(true);
+
+    if (!confirmationResult) {
+      setIsVerifying(false);
+      showToast("No active Firebase session. Please request OTP again.", "warning");
+      return;
+    }
+
+    try {
+      // 100% Verified directly by Firebase servers
+      const credential = await confirmationResult.confirm(code);
+      console.log("Firebase user authenticated successfully:", credential.user.phoneNumber);
+    } catch (err: any) {
+      setIsVerifying(false);
+      showToast("Incorrect code! Firebase rejected this OTP.", "warning");
+      return;
+    }
+
     setTimeout(() => {
       setIsVerifying(false);
-      // Advance to step 3 directly in map pin view!
-      setStep("location");
-      setStep3View("map");
-      if (!nameInput && user.name) setNameInput(user.name);
-      showToast("Phone verified! Pin your delivery location on map.", "success");
-    }, 500);
+      if (isExistingUser) {
+        // RETURNING USER: ONLY 2 STEPS! Directly logged in without map/address stage
+        registerUserPhone(phone);
+        loginWithPhone(phone);
+        setIsAuthOpen(false);
+        setStep("phone");
+        setOtpDigits(["", "", "", "", "", ""]);
+        showToast(`Welcome back! Signed in with +91 ${phone}`, "success");
+
+        if (cart.length > 0) {
+          setIsCheckoutOpen(true);
+        }
+      } else {
+        // FIRST TIME USER: 3 STAGES! Advance to stage 3 for map pin and delivery address
+        setStep("location");
+        setStep3View("map");
+        showToast("Phone verified! Step 3 of 3: Pin your delivery location on map.", "success");
+      }
+    }, 400);
   };
 
   // Map Dragging / Panning Handlers
@@ -244,19 +330,12 @@ export function AuthModal() {
   const handleLocationSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!nameInput.trim()) {
-      setNameError("Please enter your name");
-      return;
-    }
-    setNameError("");
-
     if (!addressInput.trim()) {
       setAddressError("Please enter delivery address / building / street");
       return;
     }
     setAddressError("");
 
-    const finalName = nameInput.trim();
     const finalAddress = addressInput.trim();
     const finalDetail = detailInput.trim();
 
@@ -267,15 +346,23 @@ export function AuthModal() {
       detail: finalDetail,
     });
 
-    // 2. Complete login with phone and name
-    loginWithPhone(phone, finalName);
+    // 2. Register phone for future 2-step logins
+    registerUserPhone(phone);
 
-    // 3. Close modal & reset
+    // 3. Complete login with phone
+    loginWithPhone(phone);
+
+    // 4. Close modal & reset
     setIsAuthOpen(false);
     setStep("phone");
     setStep3View("map");
     setOtpDigits(["", "", "", "", "", ""]);
-    showToast(`Welcome, ${finalName}! Address saved to ${locationTag}`, "success");
+    showToast(`Address saved to ${locationTag}! Welcome to The Red Löffel!`, "success");
+
+    // 4. Automatically advance to checkout if user has items waiting in cart
+    if (cart.length > 0) {
+      setIsCheckoutOpen(true);
+    }
   };
 
   const handleClose = () => {
@@ -286,43 +373,14 @@ export function AuthModal() {
     setOtpDigits(["", "", "", "", "", ""]);
   };
 
-  const DEMO_PAST_ORDERS = [
-    {
-      id: "ord-881",
-      status: "Order arrived",
-      price: 213,
-      date: "17 Jul, 6:51 pm",
-      items: [
-        { name: "Aloo Tikki Burger", image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=200&q=80" },
-        { name: "Butter Maggi Bowl", image: "https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=200&q=80" },
-      ],
-    },
-    {
-      id: "ord-882",
-      status: "Order arrived",
-      price: 302,
-      date: "17 Jul, 10:24 am",
-      items: [
-        { name: "Aloo Pyaaz Paratha", image: "https://images.unsplash.com/photo-1626074353765-517a681e40be?auto=format&fit=crop&w=200&q=80" },
-        { name: "Cold Coffee", image: "https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=200&q=80" },
-        { name: "Paneer Burger", image: "https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=200&q=80" },
-      ],
-    },
-    {
-      id: "ord-883",
-      status: "Order arrived",
-      price: 220,
-      date: "16 Jul, 8:53 pm",
-      items: [
-        { name: "Cheese Maggi", image: "https://images.unsplash.com/photo-1612927601601-6638404737ce?auto=format&fit=crop&w=200&q=80" },
-        { name: "Fresh Lime Soda", image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=200&q=80" },
-      ],
-    },
-  ];
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/60 backdrop-blur-xs">
-      <div className="relative w-full max-w-lg sm:max-w-xl max-h-[90vh] sm:max-h-[92vh] overflow-y-auto bg-[#FAF8F5] rounded-t-3xl sm:rounded-4xl border-t sm:border border-[#E7E0D8] shadow-2xl p-5 sm:p-7 md:p-8">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose();
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 bg-black/60 backdrop-blur-xs overscroll-contain"
+    >
+      <div className="relative w-full max-w-lg sm:max-w-xl max-h-[90vh] sm:max-h-[92vh] overflow-y-auto overscroll-contain bg-[#FAF8F5] rounded-t-3xl sm:rounded-4xl border-t sm:border border-[#E7E0D8] shadow-2xl p-5 sm:p-7 md:p-8">
         {/* Mobile handle indicator */}
         <div className="w-12 h-1.5 bg-[#D6D3D1] rounded-full mx-auto mb-3 sm:hidden" />
 
@@ -372,9 +430,6 @@ export function AuthModal() {
                   <div className="flex items-center gap-2 mt-1.5 text-sm font-semibold text-[#57534E]">
                     <Phone className="w-4 h-4 text-[#78716C]" />
                     <span>{user.phone || "6297673521"}</span>
-                    {user.name && (
-                      <span className="text-xs text-[#A8A29E] font-medium ml-1">({user.name})</span>
-                    )}
                   </div>
                 </div>
 
@@ -531,69 +586,87 @@ export function AuthModal() {
                 </div>
 
                 <div className="space-y-3.5 max-h-[68vh] overflow-y-auto pr-1">
-                  {DEMO_PAST_ORDERS.map((order) => (
-                    <div
-                      key={order.id}
-                      className="bg-white rounded-2xl border border-[#E7E0D8] shadow-2xs overflow-hidden"
-                    >
-                      <div className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                              <Check className="w-4 h-4 stroke-[3]" />
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-base text-[#1C1917]">
-                                {order.status}
-                              </h4>
-                              <p className="text-xs text-[#78716C]">
-                                ₹{order.price} • {order.date}
-                              </p>
-                            </div>
-                          </div>
-                          <ChevronRight className="w-5 h-5 text-[#A8A29E]" />
-                        </div>
-
-                        {/* Dish Thumbnails */}
-                        <div className="flex items-center gap-2.5 mt-3.5">
-                          {order.items.map((item, idx) => (
-                            <div
-                              key={idx}
-                              className="w-14 h-14 rounded-xl overflow-hidden border border-[#E7E0D8] bg-[#FAF8F5] relative shrink-0"
-                            >
-                              <img
-                                src={item.image}
-                                alt={item.name}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Reorder and Rate Order Action Buttons */}
-                      <div className="grid grid-cols-2 border-t border-[#E7E0D8] bg-[#FAF8F5]/50">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            showToast("Order items added to your cart!", "success");
-                          }}
-                          className="py-3 text-center text-sm font-bold text-emerald-700 hover:bg-emerald-50/80 transition-colors"
-                        >
-                          Reorder
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            showToast("Thank you for rating 5 stars! ⭐⭐⭐⭐⭐", "success");
-                          }}
-                          className="py-3 text-center text-sm font-bold text-emerald-700 border-l border-[#E7E0D8] hover:bg-emerald-50/80 transition-colors"
-                        >
-                          Rate order
-                        </button>
-                      </div>
+                  {userOrders.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-2xl border border-[#E7E0D8] p-6 shadow-2xs">
+                      <ShoppingBag className="w-10 h-10 text-[#A8A29E] mx-auto mb-2" />
+                      <h4 className="font-serif text-base font-bold text-[#1C1917]">No orders yet</h4>
+                      <p className="text-xs text-[#78716C] mt-1 mb-3">
+                        Orders placed under +91 {user.phone || "your number"} will appear here.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsAuthOpen(false)}
+                        className="px-4 py-2 rounded-xl bg-[#C2410C] text-white text-xs font-bold hover:bg-[#9A3412]"
+                      >
+                        Explore Menu
+                      </button>
                     </div>
-                  ))}
+                  ) : (
+                    userOrders.map((order) => (
+                      <div
+                        key={order.id}
+                        className="bg-white rounded-2xl border border-[#E7E0D8] shadow-2xs overflow-hidden"
+                      >
+                        <div className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                                <Check className="w-4 h-4 stroke-[3]" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-base text-[#1C1917]">
+                                  {order.status}
+                                </h4>
+                                <p className="text-xs text-[#78716C]">
+                                  ₹{order.total} • {order.createdAt}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold text-[#C2410C] bg-[#FED7AA]/50 px-2 py-0.5 rounded-full">
+                              #{order.id}
+                            </span>
+                          </div>
+
+                          {/* Items */}
+                          <div className="mt-3 text-xs text-[#78716C] space-y-1">
+                            {order.items.map((item, idx) => (
+                              <div key={idx} className="flex justify-between">
+                                <span>
+                                  {item.quantity}x {item.name}
+                                </span>
+                                <span className="font-medium text-[#1C1917]">
+                                  ₹{item.price * item.quantity}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Reorder and Rate Order Action Buttons */}
+                        <div className="grid grid-cols-2 border-t border-[#E7E0D8] bg-[#FAF8F5]/50">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              showToast("Order items added to your cart!", "success");
+                              setIsAuthOpen(false);
+                            }}
+                            className="py-3 text-center text-sm font-bold text-emerald-700 hover:bg-emerald-50/80 transition-colors"
+                          >
+                            Reorder
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              showToast("Thank you for rating 5 stars! ⭐⭐⭐⭐⭐", "success");
+                            }}
+                            className="py-3 text-center text-sm font-bold text-emerald-700 border-l border-[#E7E0D8] hover:bg-emerald-50/80 transition-colors"
+                          >
+                            Rate order
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -817,7 +890,6 @@ export function AuthModal() {
                   </p>
                   <div className="pt-2 border-t border-[#E7E0D8] text-xs text-[#57534E] space-y-1.5 font-medium">
                     <p>📍 Kitchen: Knowledge Park III, Near Sharda University, Greater Noida</p>
-                    <p>⏰ Open Hours: 11:00 AM – 11:45 PM Daily</p>
                     <p>📞 Phone: +91 6297673521</p>
                   </div>
                 </div>
@@ -910,23 +982,40 @@ export function AuthModal() {
           /* Step 3: Map Pin -> Address Details (All in Step 3!)      */
           /* ======================================================== */
           <div>
+            {/* Cart checkout banner if user is logging in from cart */}
+            {cart.length > 0 && (
+              <div className="mb-4 px-3.5 py-2.5 rounded-2xl bg-[#FFF7ED] border border-[#FED7AA] flex items-center justify-between text-xs animate-in fade-in">
+                <div className="flex items-center gap-2 text-[#9A3412] font-semibold">
+                  <ShoppingBag className="w-4 h-4 text-[#C2410C] shrink-0" />
+                  <span>{cartCount} items in cart • ₹{grandTotal}</span>
+                </div>
+                <span className="text-[10px] uppercase font-bold text-[#C2410C] bg-white px-2 py-0.5 rounded-full border border-[#FED7AA]">
+                  Checkout Next
+                </span>
+              </div>
+            )}
+
             {/* Header Titles */}
             <div className="mb-5 text-center sm:text-left">
               <h2 className="font-serif text-2xl sm:text-3xl font-bold text-[#1C1917]">
-                {step === "phone" && "Sign In with Mobile"}
-                {step === "otp" && "Verify OTP Code"}
+                {step === "phone" && (cart.length > 0 ? "Login to Checkout" : "Sign In with Mobile")}
+                {step === "otp" && (isExistingUser ? "Verify OTP Code" : "Step 2 of 3 • Verify OTP")}
                 {step === "location" &&
-                  (step3View === "map" ? "Pin Your Location on Map" : "Complete Address Details")}
+                  (step3View === "map" ? "Step 3 of 3 • Pin Location on Map" : "Step 3 of 3 • Complete Address")}
               </h2>
               <p className="text-xs text-[#78716C] mt-1 leading-relaxed">
                 {step === "phone" &&
-                  "Enter your 10-digit mobile number to view orders and receive updates."}
+                  (cart.length > 0
+                    ? "Enter your 10-digit mobile number to proceed directly to checkout."
+                    : "Enter your 10-digit mobile number to view orders and receive updates.")}
                 {step === "otp" &&
-                  `Enter the 6-digit verification code sent to +91 ${phone}.`}
+                  (isExistingUser
+                    ? `Enter the 6-digit verification code sent to +91 ${phone}.`
+                    : `Enter the 6-digit code sent to +91 ${phone} to setup your account.`)}
                 {step === "location" &&
                   (step3View === "map"
                     ? "Adjust the pin on the map to set where we should deliver your food."
-                    : "Enter your name, flat, and save your address tag.")}
+                    : "Enter your delivery details and save your address tag.")}
               </p>
             </div>
 
@@ -965,9 +1054,10 @@ export function AuthModal() {
                 <div className="pt-1">
                   <button
                     type="submit"
-                    className="w-full py-4 px-5 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] text-white font-bold text-base shadow-lg shadow-[#C2410C]/25 flex items-center justify-center gap-2.5 transition-all active:scale-98"
+                    disabled={isSendingOtp}
+                    className="w-full py-4 px-5 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] disabled:opacity-60 text-white font-bold text-base shadow-lg shadow-[#C2410C]/25 flex items-center justify-center gap-2.5 transition-all active:scale-98 cursor-pointer disabled:cursor-not-allowed"
                   >
-                    <span>Get Verification OTP</span>
+                    <span>{isSendingOtp ? "Sending SMS OTP..." : "Get Verification OTP"}</span>
                     <ArrowRight className="w-5 h-5" />
                   </button>
                 </div>
@@ -997,25 +1087,19 @@ export function AuthModal() {
                 </div>
 
                 <div className="flex items-center justify-between text-xs pt-1">
-                  <button
-                    type="button"
-                    onClick={handleAutoFillDemoOtp}
-                    className="flex items-center gap-1.5 text-[#C2410C] font-bold hover:underline"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Auto-fill Demo OTP (123456)
-                  </button>
+                  <span className="text-[#78716C]">
+                    Enter the code from Firebase Console
+                  </span>
 
                   {timer > 0 ? (
                     <span className="text-[#78716C] font-semibold">Resend in {timer}s</span>
                   ) : (
                     <button
                       type="button"
-                      onClick={() => {
-                        setTimer(30);
-                        showToast("New OTP sent: 123456", "info");
+                      onClick={(e) => {
+                        handlePhoneSubmit(e);
                       }}
-                      className="flex items-center gap-1 text-[#1C1917] font-bold hover:text-[#C2410C]"
+                      className="flex items-center gap-1 text-[#C2410C] font-bold hover:underline"
                     >
                       <RotateCcw className="w-3 h-3" /> Resend Code
                     </button>
@@ -1061,177 +1145,67 @@ export function AuthModal() {
                 {/* SUB-VIEW A: MAP PIN PICKER (Exact layout like reference image!) */}
                 {step3View === "map" ? (
                   <div className="space-y-3">
-                    {/* Map Box Container */}
+                    {/* Live Interactive Google Map with Places Search */}
                     <div className="relative w-full h-64 sm:h-72 rounded-2xl border border-[#E2E8F0] overflow-hidden bg-[#F1F5F9] shadow-inner select-none">
-                      {/* Top Search bar over Map */}
-                      <div className="absolute top-2.5 left-3 right-3 z-20">
-                        <div className="bg-white rounded-xl shadow-md border border-[#E2E8F0] flex items-center px-3 py-2 text-xs">
-                          <Search className="w-3.5 h-3.5 text-[#64748B] shrink-0 mr-2" />
-                          <input
-                            type="text"
-                            value={mapSearchQuery}
-                            onFocus={() => setIsSearchDropdownOpen(true)}
-                            onChange={(e) => setMapSearchQuery(e.target.value)}
-                            placeholder="Search for a new area, locality..."
-                            className="w-full bg-transparent text-xs text-[#1C1917] placeholder:text-[#94A3B8] focus:outline-hidden"
-                          />
-                        </div>
-
-                        {/* Search Dropdown */}
-                        {isSearchDropdownOpen && (
-                          <div className="mt-1 bg-white rounded-xl shadow-xl border border-[#E2E8F0] overflow-hidden divide-y divide-[#F1F5F9]">
-                            {[
-                              "Raghuma Boys Hostel, Knowledge Park III",
-                              "RCI Vidya Vihar, Knowledge Park III",
-                              "The Circle Cafe, Knowledge Park III",
-                            ].map((loc) => (
-                              <button
-                                key={loc}
-                                type="button"
-                                onClick={() => {
-                                  setMapSearchQuery("");
-                                  setIsSearchDropdownOpen(false);
-                                  handleCenterGPS();
-                                }}
-                                className="w-full text-left px-3 py-2 hover:bg-[#F8FAFC] flex items-center gap-2 text-xs text-[#1C1917]"
-                              >
-                                <MapPin className="w-3 h-3 text-[#00875A] shrink-0" />
-                                <span className="truncate">{loc}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Interactive Drag Canvas */}
-                      <div
-                        className={`absolute inset-0 cursor-grab active:cursor-grabbing ${
-                          isDraggingMap ? "cursor-grabbing" : ""
-                        }`}
-                        onMouseDown={handleMouseDown}
-                        onMouseMove={handleMouseMove}
-                        onMouseUp={handleMouseUp}
-                        onTouchStart={handleTouchStart}
-                        onTouchMove={handleTouchMove}
-                        onTouchEnd={handleTouchEnd}
-                      >
-                        {/* Map Vector Layer */}
-                        <svg
-                          className="w-full h-full pointer-events-none transition-transform duration-75 ease-out"
-                          style={{
-                            transform: `translate(${mapOffset.x}px, ${mapOffset.y}px)`,
-                          }}
-                          viewBox="0 0 400 300"
-                          preserveAspectRatio="xMidYMid slice"
-                        >
-                          <rect width="100%" height="100%" fill="#F1F5F9" />
-                          <path d="M-80,220 Q-20,180 50,200 T180,240 L180,350 L-80,350 Z" fill="#E2F5EA" />
-                          <path d="M-50,60 L450,100 M-50,260 L450,240 M80,-50 L60,350 M280,-50 L300,350" stroke="#FFFFFF" strokeWidth="16" />
-                          <path d="M-80,300 L420,50" stroke="#FFFFFF" strokeWidth="32" strokeLinecap="round" />
-                          <path d="M-80,300 L420,50" stroke="#CBD5E1" strokeWidth="1.5" fill="none" />
-
-                          {/* Raghuma Boys Hostel Blue Polygon */}
-                          <polygon points="150,110 240,60 280,100 190,150" fill="#DBEAFE" stroke="#60A5FA" strokeWidth="2" />
-                          <rect x="170" y="90" width="60" height="30" fill="#BFDBFE" rx="3" />
-
-                          {/* Landmark Label */}
-                          <g transform="translate(180, 85)">
-                            <circle cx="0" cy="0" r="10" fill="#93C5FD" opacity="0.6" />
-                            <circle cx="0" cy="0" r="5" fill="#3B82F6" />
-                            <text x="10" y="-2" fontFamily="sans-serif" fontSize="10" fontWeight="bold" fill="#1E3A8A">
-                              Raghuma Boys Hostel
-                            </text>
-                            <text x="10" y="9" fontFamily="sans-serif" fontSize="8" fill="#3B82F6">
-                              रघुमा बॉएज हॉस्टल
-                            </text>
-                          </g>
-
-                          <g transform="translate(260, 180)">
-                            <circle cx="0" cy="0" r="7" fill="#64748B" />
-                            <text x="10" y="2" fontFamily="sans-serif" fontSize="9" fontWeight="bold" fill="#475569">
-                              RCI Vidya Vihar
-                            </text>
-                          </g>
-                        </svg>
-
-                        {/* CENTER PIN WITH TOOLTIP */}
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                          <div
-                            className={`relative flex flex-col items-center -mt-12 transition-transform duration-150 ${
-                              isDraggingMap ? "-translate-y-2.5 scale-105" : ""
-                            }`}
-                          >
-                            <div className="bg-[#1C1917] text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-lg mb-1 whitespace-nowrap">
-                              Move the pin to adjust your location
-                              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-[#1C1917] rotate-45" />
-                            </div>
-
-                            <div className="relative w-8 h-8 rounded-full bg-[#1C1917] flex items-center justify-center shadow-xl ring-2 ring-white">
-                              <div className="w-3 h-3 rounded-full bg-white" />
-                              <div className="absolute -bottom-1.5 w-1.5 h-2.5 bg-[#1C1917] rounded-b-full" />
-                            </div>
-                            <div className="w-3.5 h-1.5 rounded-full bg-[#3B82F6] opacity-80 blur-[0.5px] mt-1.5 animate-pulse" />
-                          </div>
-                        </div>
-
-                        {/* Google Logo */}
-                        <div className="absolute bottom-2 left-3 select-none opacity-60">
-                          <span className="font-sans font-bold text-xs text-[#64748B]">Google</span>
-                        </div>
-
-                        {/* Floating "Use current location" button */}
-                        <div className="absolute bottom-2.5 left-0 right-0 flex justify-center z-10">
-                          <button
-                            type="button"
-                            onClick={handleCenterGPS}
-                            className="px-3.5 py-1.5 rounded-full bg-white border border-[#C2410C] text-[#C2410C] hover:bg-[#FFF7ED] shadow-md flex items-center gap-1.5 text-xs font-bold transition-all active:scale-95"
-                          >
-                            <Crosshair className="w-3.5 h-3.5 text-[#C2410C]" />
-                            <span>Use current location</span>
-                          </button>
-                        </div>
-                      </div>
+                      <GoogleMapView
+                        ref={mapRef}
+                        initialLat={DEFAULT_MAP_CENTER.lat}
+                        initialLng={DEFAULT_MAP_CENTER.lng}
+                        onAddressSelect={(geocoded) => {
+                          setCurrentLocality(geocoded.locality || "Knowledge Park III");
+                          setCurrentCity(geocoded.city || "Greater Noida");
+                          setAddressInput(geocoded.formattedAddress);
+                        }}
+                        className="w-full h-full rounded-none"
+                        showSearchBar={true}
+                      />
                     </div>
 
                     {/* Bottom Delivering Box matching brand theme */}
                     <div className="p-3.5 rounded-2xl border border-[#E7E0D8] bg-white shadow-xs space-y-2.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-[#1C1917]">
+                        <span className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
                           Delivering your order to
                         </span>
                       </div>
 
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-7 h-7 rounded-full bg-[#1C1917] flex items-center justify-center text-white shrink-0">
-                            <MapPin className="w-3.5 h-3.5" />
+                          <div className="w-8 h-8 rounded-full bg-[#1C1917] flex items-center justify-center text-[#FED7AA] shrink-0 shadow-2xs">
+                            <MapPin className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
                             <p className="text-xs sm:text-sm font-extrabold text-[#1C1917] truncate leading-tight">
                               {currentLocality}
                             </p>
-                            <p className="text-[11px] text-[#64748B] truncate mt-0.5">
-                              {currentCity}
+                            <p className="text-[11px] text-[#78716C] truncate mt-0.5" title={addressInput}>
+                              {addressInput}
                             </p>
                           </div>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setIsSearchDropdownOpen(true)}
-                          className="px-2.5 py-1 rounded-lg border border-[#C2410C] text-[#C2410C] text-xs font-bold hover:bg-[#FFF7ED]"
-                        >
-                          Change
-                        </button>
+                        <div className="shrink-0 px-2.5 py-1 rounded-xl bg-orange-50 border border-orange-200 text-[#C2410C] text-[11px] font-bold">
+                          Pinned
+                        </div>
                       </div>
+
+                      {/* Use Current GPS Location Button */}
+                      <button
+                        type="button"
+                        onClick={() => mapRef.current?.locateCurrentPosition()}
+                        className="w-full py-2.5 px-3.5 rounded-xl border-2 border-[#00875A] bg-[#F0FDF4] text-[#00875A] hover:bg-emerald-100/70 text-xs font-black flex items-center justify-center gap-2 transition-all active:scale-98 shadow-xs cursor-pointer"
+                      >
+                        <Crosshair className="w-4 h-4 text-[#00875A]" />
+                        <span>Use current location (GPS)</span>
+                      </button>
 
                       {/* Primary Brand Button: Add more address details ▸ */}
                       <button
                         type="button"
                         onClick={handleProceedToAddDetails}
-                        className="w-full py-3.5 px-4 rounded-xl bg-[#C2410C] hover:bg-[#9A3412] text-white text-sm font-bold shadow-lg shadow-[#C2410C]/25 flex items-center justify-center gap-1.5 transition-all active:scale-98 mt-1"
+                        className="w-full py-3.5 px-4 rounded-xl bg-[#C2410C] hover:bg-[#9A3412] text-white text-sm font-bold shadow-lg shadow-[#C2410C]/25 flex items-center justify-center gap-1.5 transition-all active:scale-98"
                       >
-                        <span>Add more address details</span>
+                        <span>Confirm Location & Add Details</span>
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
@@ -1255,32 +1229,7 @@ export function AuthModal() {
                       <span>Adjust pin on map</span>
                     </button>
 
-                    {/* 1. NAME */}
-                    <div>
-                      <label className="block text-xs font-bold text-[#1C1917] mb-1 uppercase tracking-wider">
-                        Full Name *
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          autoFocus
-                          value={nameInput}
-                          onChange={(e) => {
-                            setNameInput(e.target.value);
-                            setNameError("");
-                          }}
-                          placeholder="e.g. Aditya Roy"
-                          className="w-full px-4 py-3 pl-11 rounded-2xl border border-[#E7E0D8] bg-white text-sm text-[#1C1917] font-semibold placeholder:text-[#A8A29E] focus:outline-hidden focus:border-[#C2410C] focus:ring-2 focus:ring-[#C2410C]/20 transition-all"
-                          required
-                        />
-                        <User className="w-4 h-4 text-[#C2410C] absolute left-3.5 top-3.5" />
-                      </div>
-                      {nameError && (
-                        <p className="text-xs text-red-600 font-semibold mt-1">{nameError}</p>
-                      )}
-                    </div>
-
-                    {/* 2. DELIVERY ADDRESS / BUILDING / STREET */}
+                    {/* 1. DELIVERY ADDRESS / BUILDING / STREET */}
                     <div>
                       <label className="block text-xs font-bold text-[#1C1917] mb-1 uppercase tracking-wider">
                         Delivery Address / Building / Street *
@@ -1288,6 +1237,7 @@ export function AuthModal() {
                       <div className="relative">
                         <input
                           type="text"
+                          autoFocus
                           value={addressInput}
                           onChange={(e) => {
                             setAddressInput(e.target.value);
@@ -1374,7 +1324,9 @@ export function AuthModal() {
                         className="w-full py-4 px-5 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] text-white font-bold text-base shadow-lg shadow-[#C2410C]/25 flex items-center justify-center gap-2 transition-all active:scale-98"
                       >
                         <Check className="w-5 h-5" />
-                        <span>Save Location & Start Ordering</span>
+                        <span>
+                          {cart.length > 0 ? "Save & Proceed to Checkout" : "Save Location & Start Ordering"}
+                        </span>
                       </button>
                     </div>
                   </form>
@@ -1395,14 +1347,18 @@ export function AuthModal() {
                     step === "otp" ? "bg-[#C2410C] ring-4 ring-[#FED7AA]" : "bg-[#D6D3D1]"
                   }`}
                 />
-                <span
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    step === "location" ? "bg-[#C2410C] ring-4 ring-[#FED7AA]" : "bg-[#D6D3D1]"
-                  }`}
-                />
+                {!isExistingUser && (
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${
+                      step === "location" ? "bg-[#C2410C] ring-4 ring-[#FED7AA]" : "bg-[#D6D3D1]"
+                    }`}
+                  />
+                )}
               </div>
               <span className="text-xs font-bold text-[#1C1917]">
-                Step {step === "phone" ? "1" : step === "otp" ? "2" : "3"} of 3
+                {isExistingUser
+                  ? `Step ${step === "phone" ? "1" : "2"} of 2`
+                  : `Step ${step === "phone" ? "1" : step === "otp" ? "2" : "3"} of 3`}
               </span>
               <span className="text-xs text-[#78716C] font-medium hidden sm:inline">
                 • {step === "phone" ? "Mobile Number" : step === "otp" ? "Verify OTP" : "Delivery Location"}
@@ -1410,6 +1366,8 @@ export function AuthModal() {
             </div>
           </div>
         )}
+        {/* Invisible permanent reCAPTCHA anchor */}
+        <div id="recaptcha-container"></div>
       </div>
     </div>
   );

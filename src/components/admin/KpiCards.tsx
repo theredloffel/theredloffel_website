@@ -2,109 +2,113 @@
 
 import React from "react";
 import { useKitchen } from "@/context/KitchenContext";
-import { ShoppingCart, IndianRupee, Clock, Bike, TrendingUp, CheckCircle2 } from "lucide-react";
+import { Sparkles, Flame, Bike } from "lucide-react";
 
 export function KpiCards() {
-  const { orders, riders } = useKitchen();
+  const { orders } = useKitchen();
 
-  const totalOrders = orders.length;
-  const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
-  const pendingDeliveries = orders.filter(
-    (o) => o.orderType === "Delivery" && o.status !== "Delivered"
+  // 1. New Orders (Stage 1: Order Received / Pending)
+  const newOrdersCount = orders.filter(
+    (o) => o.status === "Order Received" || o.status === "Pending"
   ).length;
-  const activeRidersCount = riders.length;
+
+  // 2. Confirmed Orders (Stage 2: Kitchen Cooking / Order Status / Order Accepted / Preparing)
+  const confirmedOrdersCount = orders.filter(
+    (o) =>
+      o.status === "Order Status" ||
+      o.status === "Order Accepted" ||
+      o.status === "Preparing"
+  ).length;
+
+  // 3. Pending Deliveries (Stage 3: Out for Delivery / In the Road / Ready)
+  const pendingDeliveriesCount = orders.filter(
+    (o) =>
+      o.status === "In the Road" ||
+      o.status === "Out for Delivery" ||
+      o.status === "Ready"
+  ).length;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-      {/* 1. Today's Orders */}
-      <div className="bg-white rounded-3xl p-6 border border-[#E7E0D8] shadow-xs relative overflow-hidden group hover:border-[#D6CEB4] transition-all">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
-            Today's Orders
+    <div className="grid grid-cols-3 gap-2 sm:gap-4 lg:gap-6">
+      {/* 1. NEW ORDER (Green transparent card) */}
+      <div className="bg-emerald-500/10 backdrop-blur-xs rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 lg:p-6 border border-emerald-500/30 ring-1 ring-emerald-500/20 shadow-xs relative overflow-hidden group hover:border-emerald-600 hover:shadow-md transition-all flex flex-col justify-between">
+        <div className="flex items-center justify-between mb-1.5 sm:mb-3">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-900 truncate">
+            New Order
           </span>
-          <div className="w-10 h-10 rounded-2xl bg-[#FED7AA]/50 flex items-center justify-center text-[#C2410C]">
-            <ShoppingCart className="w-5 h-5" />
+          <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-lg sm:rounded-2xl bg-emerald-500/20 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-500/30">
+            <Sparkles className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-emerald-600" />
           </div>
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="font-serif text-3xl font-bold text-[#1C1917]">
-            {totalOrders}
+
+        <div className="flex items-baseline gap-1.5 sm:gap-2.5">
+          <span className="font-serif text-xl sm:text-3xl lg:text-4xl font-bold text-[#1C1917]">
+            {newOrdersCount}
           </span>
-          <span className="text-xs font-semibold text-emerald-600 flex items-center">
-            <TrendingUp className="w-3.5 h-3.5 mr-0.5" /> +14% vs y'day
+          <span
+            className={`text-[9px] sm:text-[11px] font-semibold px-1.5 py-0.5 sm:px-2 rounded-full hidden sm:inline-flex items-center gap-1 ${
+              newOrdersCount > 0
+                ? "bg-emerald-500/20 text-emerald-900 animate-pulse border border-emerald-500/30"
+                : "bg-white/60 text-[#78716C]"
+            }`}
+          >
+            {newOrdersCount > 0 ? "Action Required" : "No Pending"}
           </span>
         </div>
-        <p className="text-[11px] text-[#A8A29E] mt-2">
-          {orders.filter((o) => o.status === "Delivered").length} completed • {totalOrders - orders.filter((o) => o.status === "Delivered").length} in pipeline
+
+        <p className="hidden sm:block text-[11px] text-emerald-800/80 mt-2 font-medium">
+          Incoming orders waiting for kitchen acceptance
         </p>
       </div>
 
-      {/* 2. Total Revenue */}
-      <div className="bg-white rounded-3xl p-6 border border-[#E7E0D8] shadow-xs relative overflow-hidden group hover:border-[#D6CEB4] transition-all">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
-            Total Revenue (₹)
+      {/* 2. CONFIRMED ORDER (Yellow card) */}
+      <div className="bg-yellow-50/90 rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 lg:p-6 border border-yellow-300 ring-1 ring-yellow-400/20 shadow-xs relative overflow-hidden group hover:border-yellow-500 hover:shadow-md transition-all flex flex-col justify-between">
+        <div className="flex items-center justify-between mb-1.5 sm:mb-3">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-yellow-900 truncate">
+            Confirmed Order
           </span>
-          <div className="w-10 h-10 rounded-2xl bg-[#FFF7ED] flex items-center justify-center text-[#C2410C]">
-            <IndianRupee className="w-5 h-5" />
+          <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-lg sm:rounded-2xl bg-yellow-200/60 text-yellow-800 flex items-center justify-center shrink-0 border border-yellow-300">
+            <Flame className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-yellow-700" />
           </div>
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="font-serif text-3xl font-bold text-[#1C1917]">
-            ₹{Math.round(totalRevenue).toLocaleString("en-IN")}
+
+        <div className="flex items-baseline gap-1.5 sm:gap-2.5">
+          <span className="font-serif text-xl sm:text-3xl lg:text-4xl font-bold text-[#1C1917]">
+            {confirmedOrdersCount}
           </span>
-          <span className="text-xs font-semibold text-emerald-600 flex items-center">
-            <TrendingUp className="w-3.5 h-3.5 mr-0.5" /> +18.2%
+          <span className="text-[9px] sm:text-[11px] font-semibold bg-yellow-200/80 text-yellow-900 px-1.5 py-0.5 sm:px-2 rounded-full border border-yellow-300 hidden sm:inline-flex">
+            Kitchen Cooking
           </span>
         </div>
-        <p className="text-[11px] text-[#A8A29E] mt-2">
-          Average Order Value: ₹{totalOrders > 0 ? Math.round(totalRevenue / totalOrders) : 0}
+
+        <p className="hidden sm:block text-[11px] text-yellow-800/80 mt-2 font-medium">
+          Accepted orders currently being prepared
         </p>
       </div>
 
-      {/* 3. Pending Deliveries */}
-      <div className="bg-white rounded-3xl p-6 border border-[#E7E0D8] shadow-xs relative overflow-hidden group hover:border-[#D6CEB4] transition-all">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
+      {/* 3. PENDING DELIVERIES (Bike icon card) */}
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-5 lg:p-6 border border-orange-200/90 ring-1 ring-orange-300/20 shadow-xs relative overflow-hidden group hover:border-orange-400 hover:shadow-md transition-all flex flex-col justify-between">
+        <div className="flex items-center justify-between mb-1.5 sm:mb-3">
+          <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#78716C] truncate">
             Pending Deliveries
           </span>
-          <div className="w-10 h-10 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
-            <Clock className="w-5 h-5" />
+          <div className="w-6 h-6 sm:w-10 sm:h-10 rounded-lg sm:rounded-2xl bg-orange-100/70 text-[#C2410C] flex items-center justify-center shrink-0 border border-orange-200">
+            <Bike className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-[#C2410C]" />
           </div>
         </div>
-        <div className="flex items-baseline gap-2">
-          <span className="font-serif text-3xl font-bold text-[#1C1917]">
-            {pendingDeliveries}
-          </span>
-          <span className="text-xs font-medium text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-            Active Dispatches
-          </span>
-        </div>
-        <p className="text-[11px] text-[#A8A29E] mt-2">
-          Target fulfillment: &lt; 35 mins per order
-        </p>
-      </div>
 
-      {/* 4. Active Riders */}
-      <div className="bg-white rounded-3xl p-6 border border-[#E7E0D8] shadow-xs relative overflow-hidden group hover:border-[#D6CEB4] transition-all">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
-            Active Riders (3)
+        <div className="flex items-baseline gap-1.5 sm:gap-2.5">
+          <span className="font-serif text-xl sm:text-3xl lg:text-4xl font-bold text-[#1C1917]">
+            {pendingDeliveriesCount}
           </span>
-          <div className="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-            <Bike className="w-5 h-5" />
-          </div>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="font-serif text-3xl font-bold text-[#1C1917]">
-            {activeRidersCount} / 3
-          </span>
-          <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> All Online
+          <span className="text-[9px] sm:text-[11px] font-semibold bg-orange-100 text-[#9A3412] px-1.5 py-0.5 sm:px-2 rounded-full hidden sm:inline-flex items-center gap-1 border border-orange-200">
+            <Bike className="w-3.5 h-3.5 text-[#C2410C]" />
+            <span>In the Road</span>
           </span>
         </div>
-        <p className="text-[11px] text-[#A8A29E] mt-2">
-          Rajesh (EV), Vikram (Activa), Amit (Ather)
+
+        <p className="hidden sm:block text-[11px] text-[#A8A29E] mt-2">
+          Dispatched orders on the way to customers
         </p>
       </div>
     </div>

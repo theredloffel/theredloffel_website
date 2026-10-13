@@ -50,8 +50,13 @@ export function EditItemModal({ item, onClose, onSave }: EditItemModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
-      <div className="relative w-full max-w-xl bg-[#FAF8F5] rounded-3xl border border-[#E7E0D8] shadow-2xl p-6 sm:p-8 my-8">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto overscroll-contain animate-in fade-in"
+    >
+      <div className="relative w-full max-w-xl bg-[#FAF8F5] rounded-3xl border border-[#E7E0D8] shadow-2xl p-6 sm:p-8 my-8 overscroll-contain">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#E7E0D8] pb-4 mb-6">
           <div>

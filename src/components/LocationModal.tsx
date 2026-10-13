@@ -71,8 +71,13 @@ export function LocationModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="w-full sm:max-w-md bg-[#FAF8F5] rounded-t-3xl sm:rounded-3xl border border-[#E7E0D8] shadow-2xl p-6 overflow-hidden max-h-[90vh] flex flex-col">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setIsLocationModalOpen(false);
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs overscroll-contain animate-in fade-in duration-200"
+    >
+      <div className="w-full sm:max-w-md bg-[#FAF8F5] rounded-t-3xl sm:rounded-3xl border border-[#E7E0D8] shadow-2xl p-6 overflow-hidden max-h-[90vh] flex flex-col overscroll-contain">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-[#E7E0D8] shrink-0">
           <div className="flex items-center gap-2">
@@ -119,7 +124,7 @@ export function LocationModal() {
         </div>
 
         {/* Saved Addresses List (Scrollable) */}
-        <div className="overflow-y-auto space-y-2 mb-3 flex-1 pr-0.5">
+        <div className="overflow-y-auto overscroll-contain space-y-2 mb-3 flex-1 pr-0.5">
           <span className="text-[10px] font-bold uppercase tracking-wider text-[#A8A29E] block">
             Saved Addresses ({savedLocations.length})
           </span>
