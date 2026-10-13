@@ -254,6 +254,18 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem("lebistro_orders");
       } catch {}
 
+      // Purge any stale legacy coupons cache so LOFFEL50 / FEAST20 never persist
+      try {
+        const storedCoupons = localStorage.getItem("lebistro_coupons");
+        if (storedCoupons) {
+          const parsed = JSON.parse(storedCoupons);
+          if (Array.isArray(parsed) && parsed.some((c: any) => c.code !== "FREE199")) {
+            localStorage.setItem("lebistro_coupons", JSON.stringify(INITIAL_COUPONS));
+            setCoupons(INITIAL_COUPONS);
+          }
+        }
+      } catch {}
+
       const savedMenu = localStorage.getItem("lebistro_menu");
       if (savedMenu) setMenuItems(JSON.parse(savedMenu));
 
@@ -288,10 +300,17 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         setMenuItems(remoteMenu);
       }
 
-      // Coupons
+      // Coupons - strictly enforce only FREE199 / free_delivery
       const { coupons: remoteCoupons } = await couponService.fetchCoupons();
-      if (isMounted && remoteCoupons.length > 0) {
-        setCoupons(remoteCoupons);
+      if (isMounted) {
+        const filtered = (remoteCoupons || []).filter(
+          (c) => c.code.toUpperCase() === "FREE199" || c.discountType === "free_delivery"
+        );
+        const finalCoupons = filtered.length > 0 ? filtered : INITIAL_COUPONS;
+        setCoupons(finalCoupons);
+        try {
+          localStorage.setItem("lebistro_coupons", JSON.stringify(finalCoupons));
+        } catch {}
       }
 
       // Settings
@@ -390,7 +409,16 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     const unsubCoupons = couponService.subscribeToCoupons({
       onChange: async () => {
         const { coupons: latest } = await couponService.fetchCoupons();
-        if (isMounted && latest.length > 0) setCoupons(latest);
+        if (isMounted) {
+          const filtered = (latest || []).filter(
+            (c) => c.code.toUpperCase() === "FREE199" || c.discountType === "free_delivery"
+          );
+          const finalCoupons = filtered.length > 0 ? filtered : INITIAL_COUPONS;
+          setCoupons(finalCoupons);
+          try {
+            localStorage.setItem("lebistro_coupons", JSON.stringify(finalCoupons));
+          } catch {}
+        }
       },
     });
 
@@ -577,15 +605,27 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     showToast(`Base delivery charge updated to ₹${val}`, "success");
   };
 
-  // Coupons Management
+  // Coupons Management - Only Free Delivery Above 199 kept
   const [coupons, setCoupons] = useState<Coupon[]>(() => {
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("lebistro_coupons");
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch {}
-      }
+      try {
+        const saved = localStorage.getItem("lebistro_coupons");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            const filtered = parsed.filter(
+              (c: Coupon) => c.code.toUpperCase() === "FREE199" || c.discountType === "free_delivery"
+            );
+            if (filtered.length > 0) {
+              localStorage.setItem("lebistro_coupons", JSON.stringify(filtered));
+              return filtered;
+            }
+          }
+        }
+      } catch {}
+      try {
+        localStorage.setItem("lebistro_coupons", JSON.stringify(INITIAL_COUPONS));
+      } catch {}
     }
     return INITIAL_COUPONS;
   });
@@ -691,16 +731,16 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   const tax = 0;
 
   // Delivery fee calculation
-  // Free delivery is NOT automatically applied above 199.
-  // It ONLY applies when user explicitly applies a free delivery coupon (e.g. FREE199) and cart meets minOrderAmount.
+  // Free delivery applies for orders of ₹199 or above (or when free delivery coupon applied).
+  // Standard delivery charges apply for orders below ₹199.
   const deliveryFee = useMemo(() => {
     if (cartSubtotal === 0 || deliveryType === "Pickup") return 0;
 
-    // Free delivery ONLY applies if user explicitly applied a free delivery coupon AND subtotal meets minOrderAmount
     if (
-      appliedCoupon &&
-      appliedCoupon.discountType === "free_delivery" &&
-      cartSubtotal >= appliedCoupon.minOrderAmount
+      cartSubtotal >= 199 ||
+      (appliedCoupon &&
+        appliedCoupon.discountType === "free_delivery" &&
+        cartSubtotal >= appliedCoupon.minOrderAmount)
     ) {
       return 0;
     }
