@@ -19,7 +19,16 @@ import { DEFAULT_MAP_CENTER, GeocodedAddress } from "@/lib/googleMaps";
 interface AddAddressFlowModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (saved: { label: string; address: string; detail?: string }) => void;
+  onSuccess?: (saved: {
+    label: string;
+    address: string;
+    detail?: string;
+    house?: string;
+    street?: string;
+    landmark?: string;
+    lat?: number;
+    lng?: number;
+  }) => void;
 }
 
 export function AddAddressFlowModal({ isOpen, onClose, onSuccess }: AddAddressFlowModalProps) {
@@ -76,20 +85,24 @@ export function AddAddressFlowModal({ isOpen, onClose, onSuccess }: AddAddressFl
       ? `${flatDetail.trim()}, ${currentCity}`
       : currentCity;
 
-    addSavedLocation({
+    const savedData = {
       label: selectedTag,
       address: addressLine.trim(),
       detail: finalDetail,
-    });
+      house: flatDetail.trim() || finalDetail,
+      street: addressLine.trim(),
+      landmark: currentLocality,
+      lat: currentCoords.lat,
+      lng: currentCoords.lng,
+      accuracy: 10,
+    };
+
+    addSavedLocation(savedData);
     setLocationLabel(selectedTag);
     setLocationAddress(addressLine.trim());
 
     showToast(`New address saved as ${selectedTag} and set as active`, "success");
-    onSuccess?.({
-      label: selectedTag,
-      address: addressLine.trim(),
-      detail: finalDetail,
-    });
+    onSuccess?.(savedData);
     onClose();
     setPhase("map");
   };

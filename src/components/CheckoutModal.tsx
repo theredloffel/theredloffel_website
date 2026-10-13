@@ -1,9 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useKitchen } from "@/context/KitchenContext";
-import { X, MapPin, Navigation, CheckCircle2, Bell, CreditCard, Banknote, ShieldAlert, Sparkles, ArrowRight, Plus } from "lucide-react";
+import {
+  X,
+  MapPin,
+  CheckCircle2,
+  Banknote,
+  ArrowRight,
+  Plus,
+  Home,
+  Briefcase,
+  Building,
+  Edit3,
+  ChevronDown,
+} from "lucide-react";
 import { AddAddressFlowModal } from "@/components/AddAddressFlowModal";
+import { SavedLocation } from "@/types";
 
 export function CheckoutModal() {
   const {
@@ -18,13 +31,16 @@ export function CheckoutModal() {
     user,
     locationAddress,
     locationLabel,
+    setLocationAddress,
+    setLocationLabel,
+    savedLocations,
     placeOrder,
     showToast,
     setIsAuthOpen,
   } = useKitchen();
 
-  // If user somehow accesses checkout without being logged in, redirect to login
-  React.useEffect(() => {
+  // Redirect to login if unauthenticated
+  useEffect(() => {
     if (isCheckoutOpen && !user.isLoggedIn) {
       setIsCheckoutOpen(false);
       setIsAuthOpen(true);
@@ -34,29 +50,59 @@ export function CheckoutModal() {
 
   const [customerName, setCustomerName] = useState(user.name || "");
   const [customerPhone, setCustomerPhone] = useState(user.phone || "");
-  const [house, setHouse] = useState("");
-  const [street, setStreet] = useState(locationAddress || "");
-  const [landmark, setLandmark] = useState("");
 
-  React.useEffect(() => {
-    if (user.phone) setCustomerPhone(user.phone);
-    if (user.name) setCustomerName(user.name);
-    if (locationAddress) setStreet(locationAddress);
-  }, [user.phone, user.name, locationAddress]);
+  // Active / Selected Saved Location ID
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
 
-  // Geolocation pin state
-  const [pinnedCoords, setPinnedCoords] = useState<{ lat: number; lng: number; accuracy: number } | null>({
+  // Fallback or customized flat/house/landmark fields
+  const [customHouse, setCustomHouse] = useState("");
+  const [customLandmark, setCustomLandmark] = useState("");
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+
+  // Pin coords state
+  const [pinnedCoords, setPinnedCoords] = useState<{ lat: number; lng: number; accuracy: number }>({
     lat: 28.4744,
-    lng: 77.504,
+    lng: 77.4917,
     accuracy: 10,
   });
-  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
-  const [isAddAddressFlowOpen, setIsAddAddressFlowOpen] = useState(false);
 
-  // Consent & Payment
-  const [whatsAppConsent, setWhatsAppConsent] = useState(true);
-  const paymentMethod = "Cash on Delivery (COD)";
+  const [isAddAddressFlowOpen, setIsAddAddressFlowOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Synchronize customer profile & auto-select saved location
+  useEffect(() => {
+    if (user.phone) setCustomerPhone(user.phone);
+    if (user.name) setCustomerName(user.name);
+  }, [user.phone, user.name]);
+
+  // Determine active saved location
+  useEffect(() => {
+    if (savedLocations.length > 0) {
+      const match =
+        savedLocations.find((l) => l.id === selectedLocationId) ||
+        savedLocations.find((l) => l.address.toLowerCase() === locationAddress.toLowerCase()) ||
+        savedLocations[0];
+
+      if (match) {
+        setSelectedLocationId(match.id);
+        if (match.lat && match.lng) {
+          setPinnedCoords({
+            lat: match.lat,
+            lng: match.lng,
+            accuracy: match.accuracy || 10,
+          });
+        }
+      }
+    } else if (user.defaultAddress) {
+      if (user.defaultAddress.lat && user.defaultAddress.lng) {
+        setPinnedCoords({
+          lat: user.defaultAddress.lat,
+          lng: user.defaultAddress.lng,
+          accuracy: user.defaultAddress.accuracy || 10,
+        });
+      }
+    }
+  }, [savedLocations, locationAddress, selectedLocationId, user.defaultAddress]);
 
   if (!isCheckoutOpen) return null;
 
@@ -66,53 +112,78 @@ export function CheckoutModal() {
         isOpen={true}
         onClose={() => setIsAddAddressFlowOpen(false)}
         onSuccess={(loc) => {
-          setStreet(loc.address);
-          if (loc.detail) setHouse(loc.detail);
-          setLandmark(loc.label);
+          if (loc.lat && loc.lng) {
+            setPinnedCoords({ lat: loc.lat, lng: loc.lng, accuracy: 10 });
+          }
+          if (loc.house) setCustomHouse(loc.house);
+          if (loc.landmark) setCustomLandmark(loc.landmark);
           setIsAddAddressFlowOpen(false);
         }}
       />
     );
   }
 
-  const handleDetectLocation = () => {
-    setIsDetectingLocation(true);
-    if (typeof window !== "undefined" && "geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setPinnedCoords({
-            lat: parseFloat(pos.coords.latitude.toFixed(4)),
-            lng: parseFloat(pos.coords.longitude.toFixed(4)),
-            accuracy: Math.round(pos.coords.accuracy || 12),
-          });
-          setIsDetectingLocation(false);
-          showToast("Delivery address pinned successfully!", "success");
-        },
-        () => {
-          // Fallback to simulated high accuracy pin
-          setTimeout(() => {
-            setPinnedCoords({
-              lat: 28.4744,
-              lng: 77.504,
-              accuracy: 10,
-            });
-            setIsDetectingLocation(false);
-            showToast("Location pinned: Indiranagar Gourmet Hub", "info");
-          }, 800);
-        },
-        { enableHighAccuracy: true, timeout: 5000 }
-      );
-    } else {
-      setTimeout(() => {
-        setPinnedCoords({
-          lat: 28.4744,
-          lng: 77.504,
-          accuracy: 10,
-        });
-        setIsDetectingLocation(false);
-        showToast("Location pinned: Indiranagar Gourmet Hub", "info");
-      }, 600);
+  // Active location object
+  const activeLocation: SavedLocation | undefined =
+    savedLocations.find((l) => l.id === selectedLocationId) ||
+    savedLocations[0] ||
+    undefined;
+
+  const activeHouse =
+    customHouse.trim() ||
+    activeLocation?.house ||
+    activeLocation?.detail ||
+    user.defaultAddress?.house ||
+    "Doorstep";
+
+  const activeStreet =
+    activeLocation?.street ||
+    activeLocation?.address ||
+    locationAddress ||
+    user.defaultAddress?.street ||
+    "";
+
+  const activeLandmark =
+    customLandmark.trim() ||
+    activeLocation?.landmark ||
+    user.defaultAddress?.landmark ||
+    "";
+
+  const activeLat =
+    activeLocation?.lat ||
+    pinnedCoords.lat ||
+    user.defaultAddress?.lat ||
+    28.4744;
+
+  const activeLng =
+    activeLocation?.lng ||
+    pinnedCoords.lng ||
+    user.defaultAddress?.lng ||
+    77.4917;
+
+  const handleSelectLocation = (loc: SavedLocation) => {
+    setSelectedLocationId(loc.id);
+    setLocationLabel(loc.label);
+    setLocationAddress(loc.address);
+    if (loc.lat && loc.lng) {
+      setPinnedCoords({
+        lat: loc.lat,
+        lng: loc.lng,
+        accuracy: loc.accuracy || 10,
+      });
     }
+    setCustomHouse("");
+    setCustomLandmark("");
+    setIsEditingDetails(false);
+    showToast(`Delivery address set to ${loc.label}`, "info");
+  };
+
+  const getTagIcon = (label: string) => {
+    const l = label.toUpperCase();
+    if (l.includes("HOME")) return <Home className="w-3.5 h-3.5" />;
+    if (l.includes("WORK") || l.includes("OFFICE")) return <Briefcase className="w-3.5 h-3.5" />;
+    if (l.includes("HOSTEL") || l.includes("COLLEGE")) return <Building className="w-3.5 h-3.5" />;
+    return <MapPin className="w-3.5 h-3.5" />;
   };
 
   const handleSubmitOrder = (e: React.FormEvent) => {
@@ -126,8 +197,8 @@ export function CheckoutModal() {
       showToast("Please provide a valid 10-digit mobile number", "warning");
       return;
     }
-    if (!house.trim() || !street.trim()) {
-      showToast("Please enter house number and street address", "warning");
+    if (!activeStreet.trim()) {
+      showToast("Please select or add a delivery address", "warning");
       return;
     }
 
@@ -140,33 +211,31 @@ export function CheckoutModal() {
       customerName: customerName.trim(),
       customerPhone: fullPhone,
       address: {
-        house: house.trim(),
-        street: street.trim(),
-        landmark: landmark.trim(),
-        lat: pinnedCoords?.lat || 28.4744,
-        lng: pinnedCoords?.lng || 77.4917,
-        accuracy: pinnedCoords?.accuracy || 10,
+        house: activeHouse.trim(),
+        street: activeStreet.trim(),
+        landmark: activeLandmark.trim(),
+        lat: activeLat,
+        lng: activeLng,
+        accuracy: pinnedCoords.accuracy || 10,
       },
       paymentMethod: "Cash on Delivery (COD)" as const,
-      whatsAppOptIn: whatsAppConsent,
+      whatsAppOptIn: true,
     };
 
     placeOrder(orderData);
 
-    // Dispatch Order Confirmation Notification
-    if (whatsAppConsent) {
-      fetch("/api/notifications/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          orderId: `TRL-${Math.floor(1000 + Math.random() * 9000)}`,
-          type: "CONFIRMED_PREPARING",
-          customerName: customerName.trim(),
-          amount: grandTotal,
-        }),
-      }).catch((e) => console.error("Notification send failed:", e));
-    }
+    // Silent background dispatch of order notification
+    fetch("/api/notifications/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        phone: cleanPhone,
+        orderId: `TRL-${Math.floor(1000 + Math.random() * 9000)}`,
+        type: "CONFIRMED_PREPARING",
+        customerName: customerName.trim(),
+        amount: grandTotal,
+      }),
+    }).catch((e) => console.error("Notification send failed:", e));
 
     setIsSubmitting(false);
     setIsCheckoutOpen(false);
@@ -192,15 +261,18 @@ export function CheckoutModal() {
           </div>
           <button
             onClick={() => setIsCheckoutOpen(false)}
-            className="w-8 h-8 rounded-full border border-[#E7E0D8] bg-[#F5EFEB] flex items-center justify-center text-[#78716C] hover:text-[#1C1917]"
+            className="w-8 h-8 rounded-full border border-[#E7E0D8] bg-[#F5EFEB] flex items-center justify-center text-[#78716C] hover:text-[#1C1917] cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content Form */}
-        <form onSubmit={handleSubmitOrder} className="p-6 sm:p-8 space-y-6 max-h-[80vh] overflow-y-auto overscroll-contain">
-          {/* Customer Personal Details */}
+        <form
+          onSubmit={handleSubmitOrder}
+          className="p-6 sm:p-8 space-y-6 max-h-[80vh] overflow-y-auto overscroll-contain"
+        >
+          {/* 1. Customer Personal Details */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
               1. Customer Information
@@ -242,108 +314,180 @@ export function CheckoutModal() {
             </div>
           </div>
 
-          {/* Delivery Address & Map Pin */}
+          {/* 2. Delivery Address - Dropdown Form for Multiple Addresses */}
           <div className="space-y-4 pt-4 border-t border-[#E7E0D8]">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
                 2. Delivery Address
               </h3>
+
               <button
                 type="button"
                 onClick={() => setIsAddAddressFlowOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FED7AA]/60 text-[#9A3412] text-xs font-semibold hover:bg-[#FED7AA] transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FED7AA]/60 text-[#9A3412] hover:bg-[#FED7AA] text-xs font-bold transition-all cursor-pointer shrink-0"
               >
-                <MapPin className="w-3.5 h-3.5 text-[#C2410C]" />
-                <span>Select / Pin on Map</span>
+                <Plus className="w-3.5 h-3.5 text-[#C2410C]" />
+                <span>Add Location</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#1C1917] mb-1">
-                  House / Flat / Building No. *
+            {/* Dropdown Form for Selecting Between Multiple Addresses */}
+            {savedLocations.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-[#1C1917]">
+                  Select Saved Address
                 </label>
-                <input
-                  type="text"
-                  required
-                  value={house}
-                  onChange={(e) => setHouse(e.target.value)}
-                  placeholder="e.g. Flat 402, Magnolia Towers"
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#1C1917] mb-1">
-                  Landmark / Directions
-                </label>
-                <input
-                  type="text"
-                  value={landmark}
-                  onChange={(e) => setLandmark(e.target.value)}
-                  placeholder="e.g. Near Monkey Bar, Opposite Gate 2"
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
-                />
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-semibold text-[#1C1917] mb-1">
-                  Street / Locality / Area *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={street}
-                  onChange={(e) => setStreet(e.target.value)}
-                  placeholder="e.g. 12th Main, HAL 2nd Stage, Indiranagar, Bengaluru"
-                  className="w-full px-4 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
-                />
-              </div>
-            </div>
-
-            {/* Delivery Pin Confirmation Card */}
-            {pinnedCoords && (
-              <div className="p-3.5 rounded-2xl bg-[#F5EFEB] border border-[#E7E0D8] flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-[#C2410C] text-white flex items-center justify-center shrink-0 shadow-xs">
-                    <MapPin className="w-4 h-4" />
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <select
+                      value={activeLocation?.id || ""}
+                      onChange={(e) => {
+                        if (e.target.value === "__ADD_NEW__") {
+                          setIsAddAddressFlowOpen(true);
+                          return;
+                        }
+                        const found = savedLocations.find((l) => l.id === e.target.value);
+                        if (found) handleSelectLocation(found);
+                      }}
+                      className="w-full appearance-none pl-10 pr-9 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs font-bold text-[#1C1917] focus:border-[#C2410C] focus:ring-1 focus:ring-[#C2410C]/20 focus:outline-hidden cursor-pointer shadow-2xs"
+                    >
+                      {savedLocations.map((loc) => (
+                        <option key={loc.id} value={loc.id}>
+                          {loc.label}: {loc.house ? `${loc.house}, ` : ""}{loc.street || loc.address}
+                        </option>
+                      ))}
+                      <option value="__ADD_NEW__">+ Add New Address...</option>
+                    </select>
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#C2410C]">
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#78716C]">
+                      <ChevronDown className="w-4 h-4" />
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-[#1C1917]">
-                      Delivery Location Confirmed
-                    </p>
-                    <p className="text-[11px] text-[#78716C]">
-                      Order will be dispatched directly to your address
-                    </p>
-                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAddAddressFlowOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#FED7AA]/60 hover:bg-[#FED7AA] text-[#9A3412] text-xs font-bold transition-all shrink-0 cursor-pointer shadow-2xs"
+                  >
+                    <Plus className="w-4 h-4 text-[#C2410C]" />
+                    <span>Add New</span>
+                  </button>
                 </div>
-                <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold uppercase shrink-0">
-                  Confirmed
-                </span>
               </div>
             )}
 
-            {/* Notification Consent Checkbox */}
-            <label className="flex items-start gap-3 p-3 rounded-xl bg-white border border-[#E7E0D8] cursor-pointer hover:border-[#C2410C] transition-colors">
-              <input
-                type="checkbox"
-                checked={whatsAppConsent}
-                onChange={(e) => setWhatsAppConsent(e.target.checked)}
-                className="mt-0.5 rounded border-gray-300 text-[#C2410C] focus:ring-[#C2410C]"
-              />
-              <div className="text-xs">
-                <span className="font-semibold text-[#1C1917] flex items-center gap-1.5">
-                  <Bell className="w-3.5 h-3.5 text-[#C2410C]" />
-                  Order & Delivery Notifications
-                </span>
-                <p className="text-[#78716C] mt-0.5">
-                  I agree to receive live cooking and delivery status alerts.
-                </p>
+            {/* Active Selected Address Details Card */}
+            {activeStreet ? (
+              <div className="p-4 rounded-2xl bg-white border border-[#E7E0D8] shadow-xs relative overflow-hidden space-y-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#FED7AA]/50 text-[#C2410C] flex items-center justify-center shrink-0">
+                      {getTagIcon(activeLocation?.label || "HOME")}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-extrabold uppercase px-2 py-0.5 rounded-md bg-[#FED7AA]/50 text-[#9A3412]">
+                          {activeLocation?.label || "HOME"}
+                        </span>
+                        <span className="text-[11px] text-[#78716C] font-semibold">
+                          Delivering to this address
+                        </span>
+                      </div>
+                      <p className="text-sm font-bold text-[#1C1917] mt-1">
+                        {activeHouse}
+                      </p>
+                      <p className="text-xs text-[#57534E] leading-relaxed">
+                        {activeStreet}
+                      </p>
+                      {activeLandmark && (
+                        <p className="text-xs text-[#C2410C] font-semibold mt-0.5">
+                          📍 Near {activeLandmark}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAddAddressFlowOpen(true)}
+                    className="text-xs text-[#C2410C] font-bold hover:underline shrink-0 cursor-pointer flex items-center gap-1"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Change Pin</span>
+                  </button>
+                </div>
+
+                {/* Optional toggle to tweak flat / landmark */}
+                <div className="pt-1">
+                  {!isEditingDetails ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCustomHouse(activeHouse);
+                        setCustomLandmark(activeLandmark);
+                        setIsEditingDetails(true);
+                      }}
+                      className="text-[11px] text-[#78716C] hover:text-[#1C1917] font-semibold underline cursor-pointer"
+                    >
+                      + Add extra landmark or floor note
+                    </button>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#E7E0D8]/60">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-[#1C1917] mb-1">
+                          House / Flat / Floor
+                        </label>
+                        <input
+                          type="text"
+                          value={customHouse}
+                          onChange={(e) => setCustomHouse(e.target.value)}
+                          placeholder="e.g. Flat 301, Tower B"
+                          className="w-full px-3 py-2 rounded-xl border border-[#E7E0D8] bg-[#FAF8F5] text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-[#1C1917] mb-1">
+                          Landmark Instructions
+                        </label>
+                        <input
+                          type="text"
+                          value={customLandmark}
+                          onChange={(e) => setCustomLandmark(e.target.value)}
+                          placeholder="e.g. Near Gate 1"
+                          className="w-full px-3 py-2 rounded-xl border border-[#E7E0D8] bg-[#FAF8F5] text-xs text-[#1C1917] focus:border-[#C2410C] focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            </label>
+            ) : (
+              /* No Address Saved Yet State */
+              <div className="p-6 rounded-2xl bg-white border-2 border-dashed border-[#E7E0D8] text-center space-y-3">
+                <div className="w-10 h-10 rounded-full bg-[#FED7AA]/50 text-[#C2410C] flex items-center justify-center mx-auto">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-[#1C1917]">No Delivery Address Selected</h4>
+                  <p className="text-xs text-[#78716C] mt-0.5">
+                    Pin your location on Google Maps so we can deliver to your door.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddAddressFlowOpen(true)}
+                  className="px-4 py-2.5 rounded-xl bg-[#C2410C] text-white text-xs font-bold hover:bg-[#9A3412] inline-flex items-center gap-1.5 transition-all shadow-md shadow-[#C2410C]/20 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Pin Delivery Location on Map</span>
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Payment Method Selector (Cash on Delivery Only) */}
+          {/* 3. Payment Method (Cash on Delivery Only) */}
           <div className="space-y-3 pt-4 border-t border-[#E7E0D8]">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
               3. Payment Method
@@ -353,7 +497,9 @@ export function CheckoutModal() {
                 <div className="flex items-center gap-2">
                   <Banknote className="w-4 h-4 text-[#C2410C]" />
                   <span className="text-xs font-bold text-[#1C1917]">Cash on Delivery (COD)</span>
-                  <span className="text-[10px] bg-[#FED7AA] text-[#9A3412] px-2 py-0.5 rounded-full font-bold">Only Option Available</span>
+                  <span className="text-[10px] bg-[#FED7AA] text-[#9A3412] px-2 py-0.5 rounded-full font-bold">
+                    Only Option Available
+                  </span>
                 </div>
                 <p className="text-[11px] text-[#78716C] mt-1">
                   Pay with Cash or UPI scan upon food delivery at your door.
@@ -367,14 +513,15 @@ export function CheckoutModal() {
           <div className="p-4 rounded-2xl bg-white border border-[#E7E0D8] flex items-center justify-between">
             <div>
               <p className="text-[11px] text-[#78716C]">
-                Total Payable ({cart.length} items • incl. ₹{packagingCharge} packaging{deliveryFee === 0 ? " • Free Delivery" : ""})
+                Total Payable ({cart.length} items • incl. ₹{packagingCharge} packaging
+                {deliveryFee === 0 ? " • Free Delivery" : ""})
               </p>
               <p className="font-serif text-2xl font-bold text-[#1C1917]">₹{grandTotal}</p>
             </div>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="py-3.5 px-6 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] text-white font-semibold text-sm shadow-md shadow-[#C2410C]/25 flex items-center gap-2 disabled:opacity-50 transition-all active:scale-98"
+              disabled={isSubmitting || !activeStreet}
+              className="py-3.5 px-6 rounded-2xl bg-[#C2410C] hover:bg-[#9A3412] text-white font-semibold text-sm shadow-md shadow-[#C2410C]/25 flex items-center gap-2 disabled:opacity-50 transition-all active:scale-98 cursor-pointer"
             >
               {isSubmitting ? (
                 <>
@@ -390,7 +537,6 @@ export function CheckoutModal() {
             </button>
           </div>
         </form>
-
       </div>
     </div>
   );

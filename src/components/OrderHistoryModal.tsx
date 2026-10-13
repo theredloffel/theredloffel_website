@@ -132,8 +132,8 @@ export function OrderHistoryModal() {
               <p className="text-xs text-[#78716C]">
                 {singleOrder
                   ? singleOrder.status === "Rejected"
-                    ? `Order rejected due to ${singleOrder.rejectionReason || "out of stock"} • Helpline: +91 62976 73521`
-                    : `Current Status: ${singleOrder.status} • Helpline: +91 62976 73521`
+                    ? `Order rejected due to ${singleOrder.rejectionReason || "out of stock"} • Helpline: +91 96257 50927`
+                    : `Current Status: ${singleOrder.status} • Helpline: +91 96257 50927`
                   : "Completed orders and dispatch history from The Red Löffel Kitchen"}
               </p>
             </div>
@@ -310,7 +310,7 @@ export function OrderHistoryModal() {
                             The kitchen could not fulfill your order due to {order.rejectionReason || "out of stock"}. This is the final status and the order has been archived to your order history.
                           </p>
                           <p className="text-[11px] font-medium text-rose-600 pt-0.5">
-                            For any help, please call customer helpline: +91 62976 73521.
+                            For any help, please call customer helpline: +91 96257 50927.
                           </p>
                         </div>
                       </div>
@@ -452,7 +452,7 @@ export function OrderHistoryModal() {
                         Need any help with your order?
                       </p>
                       <p className="text-[11px] text-[#C2410C]">
-                        Call our kitchen helpline at +91 62976 73521. We are live and ready to assist you!
+                        Call our kitchen helpline at +91 96257 50927. We are live and ready to assist you!
                       </p>
                     </div>
                   </div>

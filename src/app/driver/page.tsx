@@ -649,9 +649,10 @@ export default function DriverPortalPage() {
               /* List of Active Orders */
               <div className="space-y-4">
                 {activeOrders.map((order) => {
-                  const googleMapsUrl = order.address
-                    ? `https://www.google.com/maps/dir/?api=1&destination=${order.address.lat},${order.address.lng}`
-                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("Knowledge Park III, Greater Noida")}`;
+                  const hasCoordinates = Boolean(order.address?.lat && order.address?.lng);
+                  const googleMapsUrl = hasCoordinates
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${order.address!.lat},${order.address!.lng}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(order.address?.street || "Knowledge Park III, Greater Noida")}`;
 
                   return (
                     <div
@@ -734,6 +735,7 @@ export default function DriverPortalPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                             className="py-2.5 px-3.5 rounded-xl bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-[#0284C7]/20 transition-all shrink-0 cursor-pointer"
+                            title="Open Google Maps turn-by-turn navigation to customer's pinned coordinates"
                           >
                             <Navigation className="w-3.5 h-3.5" />
                             <span>Open Maps</span>

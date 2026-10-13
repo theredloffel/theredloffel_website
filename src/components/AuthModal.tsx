@@ -100,6 +100,10 @@ export function AuthModal() {
   const [locationTag, setLocationTag] = useState<"HOME" | "WORK" | "HOSTEL" | "OTHER">("HOME");
 
   // Map state inside Step 3
+  const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number }>({
+    lat: DEFAULT_MAP_CENTER.lat,
+    lng: DEFAULT_MAP_CENTER.lng,
+  });
   const [mapOffset, setMapOffset] = useState({ x: 0, y: 0 });
   const [isDraggingMap, setIsDraggingMap] = useState(false);
   const dragStartRef = useRef({ mouseX: 0, mouseY: 0, startOffsetX: 0, startOffsetY: 0 });
@@ -166,7 +170,7 @@ export function AuthModal() {
           (window as any).recaptchaVerifier = null;
         } catch { }
 
-        showToast(err?.message || "Firebase verification failed. Check console for details.", "warning");
+        showToast("Could not send SMS verification code. Please check your mobile number.", "warning");
         return;
       }
     }
@@ -218,7 +222,7 @@ export function AuthModal() {
       console.log("Firebase user authenticated successfully:", credential.user.phoneNumber);
     } catch (err: any) {
       setIsVerifying(false);
-      showToast("Incorrect code! Firebase rejected this OTP.", "warning");
+      showToast("Incorrect code. Please enter the valid 6-digit code received via SMS.", "warning");
       return;
     }
 
@@ -340,11 +344,17 @@ export function AuthModal() {
     const finalAddress = addressInput.trim();
     const finalDetail = detailInput.trim();
 
-    // 1. Add to saved locations and set as active location
+    // 1. Add to saved locations and set as active location with exact coordinates
     addSavedLocation({
       label: locationTag,
       address: finalAddress,
       detail: finalDetail,
+      house: finalDetail,
+      street: finalAddress,
+      landmark: currentLocality,
+      lat: currentCoords.lat,
+      lng: currentCoords.lng,
+      accuracy: 10,
     });
 
     // 2. Register phone for future 2-step logins
@@ -867,8 +877,8 @@ export function AuthModal() {
                     and cold beverages prepared fresh with 100% premium ingredients.
                   </p>
                   <div className="pt-2 border-t border-[#E7E0D8] text-xs text-[#57534E] space-y-1.5 font-medium">
-                    <p>📍 Kitchen: Knowledge Park III, Near Sharda University, Greater Noida</p>
-                    <p>📞 Phone: +91 6297673521</p>
+                    <p>📍 Kitchen: Nalanda living boys hostel , near NIET BUISNESS SCHOOL, knowledge park 3</p>
+                    <p>📞 Phone: +91 96257 50927</p>
                   </div>
                 </div>
               </div>
@@ -1077,7 +1087,7 @@ export function AuthModal() {
 
                 <div className="flex items-center justify-between text-xs pt-1">
                   <span className="text-[#78716C]">
-                    Enter the code from Firebase Console
+                    Enter the 6-digit verification code sent to your phone
                   </span>
 
                   {timer > 0 ? (
@@ -1141,6 +1151,7 @@ export function AuthModal() {
                         initialLat={DEFAULT_MAP_CENTER.lat}
                         initialLng={DEFAULT_MAP_CENTER.lng}
                         onAddressSelect={(geocoded) => {
+                          setCurrentCoords({ lat: geocoded.lat, lng: geocoded.lng });
                           setCurrentLocality(geocoded.locality || "Knowledge Park III");
                           setCurrentCity(geocoded.city || "Greater Noida");
                           setAddressInput(geocoded.formattedAddress);

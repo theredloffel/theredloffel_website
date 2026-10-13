@@ -105,7 +105,17 @@ interface KitchenContextType {
   locationAddress: string;
   setLocationAddress: (address: string) => void;
   savedLocations: SavedLocation[];
-  addSavedLocation: (location: { label: string; address: string; detail?: string }) => void;
+  addSavedLocation: (location: {
+    label: string;
+    address: string;
+    detail?: string;
+    house?: string;
+    street?: string;
+    landmark?: string;
+    lat?: number;
+    lng?: number;
+    accuracy?: number;
+  }) => void;
   removeSavedLocation: (id: string) => void;
 
   // Store Operational Status
@@ -1029,27 +1039,84 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     }
   }, [savedLocations, user.isLoggedIn, user.phone]);
 
-  const addSavedLocation = ({ label, address, detail }: { label: string; address: string; detail?: string }) => {
+  const addSavedLocation = ({
+    label,
+    address,
+    detail,
+    house,
+    street,
+    landmark,
+    lat,
+    lng,
+    accuracy,
+  }: {
+    label: string;
+    address: string;
+    detail?: string;
+    house?: string;
+    street?: string;
+    landmark?: string;
+    lat?: number;
+    lng?: number;
+    accuracy?: number;
+  }) => {
     const cleanLabel = (label.trim() || "OTHER").toUpperCase();
     const cleanAddress = address.trim();
     const cleanDetail = detail?.trim() || "";
+    const cleanHouse = (house?.trim() || cleanDetail).trim();
+    const cleanStreet = (street?.trim() || cleanAddress).trim();
+    const cleanLandmark = landmark?.trim() || "";
+    const cleanLat = lat ?? 28.4744;
+    const cleanLng = lng ?? 77.4917;
+    const cleanAccuracy = accuracy ?? 10;
 
     const newLoc: SavedLocation = {
       id: `loc-${Date.now()}`,
       label: cleanLabel,
       address: cleanAddress,
       detail: cleanDetail,
+      house: cleanHouse,
+      street: cleanStreet,
+      landmark: cleanLandmark,
+      lat: cleanLat,
+      lng: cleanLng,
+      accuracy: cleanAccuracy,
     };
 
     setSavedLocations((prev) => {
       const filtered = prev.filter(
         (l) => l.address.toLowerCase() !== cleanAddress.toLowerCase()
       );
-      return [newLoc, ...filtered];
+      const updated = [newLoc, ...filtered];
+      if (user.phone) {
+        const cleanPhone = user.phone.replace(/\D/g, "");
+        try {
+          localStorage.setItem(`lebistro_saved_locations_${cleanPhone}`, JSON.stringify(updated));
+        } catch {}
+      }
+      return updated;
     });
 
     setLocationLabel(cleanLabel);
     setLocationAddress(cleanAddress);
+
+    setUser((prev) => {
+      const updatedUser: UserProfile = {
+        ...prev,
+        defaultAddress: {
+          house: cleanHouse,
+          street: cleanStreet,
+          landmark: cleanLandmark,
+          lat: cleanLat,
+          lng: cleanLng,
+          accuracy: cleanAccuracy,
+        },
+      };
+      try {
+        localStorage.setItem("lebistro_user", JSON.stringify(updatedUser));
+      } catch {}
+      return updatedUser;
+    });
   };
 
   const removeSavedLocation = (id: string) => {
@@ -1059,12 +1126,44 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   // User auth
   const loginWithPhone = (phone: string, name?: string) => {
     const cleanPhone = phone.replace(/\D/g, "");
-    setUser({
+
+    // 0. Check and load user's saved locations immediately
+    let userLocations: SavedLocation[] = [];
+    try {
+      const storedLocs = localStorage.getItem(`lebistro_saved_locations_${cleanPhone}`);
+      if (storedLocs) {
+        userLocations = JSON.parse(storedLocs);
+      }
+    } catch {}
+
+    const firstLoc = userLocations[0];
+    const defaultAddr: OrderAddress | undefined = firstLoc
+      ? {
+          house: firstLoc.house || firstLoc.detail || "",
+          street: firstLoc.street || firstLoc.address,
+          landmark: firstLoc.landmark || "",
+          lat: firstLoc.lat || 28.4744,
+          lng: firstLoc.lng || 77.4917,
+          accuracy: firstLoc.accuracy || 10,
+        }
+      : user.defaultAddress;
+
+    const loggedInUser: UserProfile = {
       name: name || user.name || "Gourmet Member",
       phone: phone,
       isLoggedIn: true,
-      defaultAddress: user.defaultAddress,
-    });
+      defaultAddress: defaultAddr,
+    };
+    setUser(loggedInUser);
+    try {
+      localStorage.setItem("lebistro_user", JSON.stringify(loggedInUser));
+    } catch {}
+
+    if (userLocations.length > 0) {
+      setSavedLocations(userLocations);
+      setLocationLabel(userLocations[0].label);
+      setLocationAddress(userLocations[0].address);
+    }
 
     // 1. Restore this specific user's saved cart from localStorage if exists
     try {

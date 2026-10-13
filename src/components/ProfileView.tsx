@@ -1062,8 +1062,8 @@ export function ProfileView() {
                 refreshing beverages using fresh ingredients and chef-curated recipes.
               </p>
               <div className="pt-3 border-t border-[#E7E0D8] text-xs text-[#57534E] space-y-2 font-medium">
-                <p>📍 Kitchen: Knowledge Park III, Near Sharda University, Greater Noida</p>
-                <p>📞 Phone: +91 6297673521</p>
+                <p>📍 Kitchen: Nalanda living boys hostel , near NIET BUISNESS SCHOOL, knowledge park 3</p>
+                <p>📞 Phone: +91 96257 50927</p>
               </div>
             </div>
           </div>

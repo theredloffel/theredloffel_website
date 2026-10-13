@@ -17,12 +17,12 @@ export interface GeocodedAddress {
   sublocality?: string;
 }
 
-// Fallback Default: Greater Noida Knowledge Park III (The Red Löffel base)
+// Fallback Default: Greater Noida Knowledge Park 3 (The Red Löffel base)
 export const DEFAULT_MAP_CENTER = {
   lat: 28.4744,
   lng: 77.4917,
-  address: "Raghuma Boys Hostel Block C, Knowledge Park III, Greater Noida",
-  locality: "Knowledge Park III",
+  address: "Nalanda living boys hostel , near NIET BUISNESS SCHOOL, knowledge park 3",
+  locality: "Knowledge Park 3",
   city: "Greater Noida",
 };
 

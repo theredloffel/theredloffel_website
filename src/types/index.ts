@@ -111,6 +111,12 @@ export interface SavedLocation {
   label: string;
   address: string;
   detail?: string;
+  house?: string;
+  street?: string;
+  landmark?: string;
+  lat?: number;
+  lng?: number;
+  accuracy?: number;
 }
 
 export type DiscountType = "free_delivery" | "flat" | "percentage";

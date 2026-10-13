@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { Header } from "@/components/Header";
 import { CategoryCarousel } from "@/components/CategoryCarousel";
@@ -13,10 +12,8 @@ import { OrderHistoryModal } from "@/components/OrderHistoryModal";
 import { LocationModal } from "@/components/LocationModal";
 import { FloatingMenuCartWidget } from "@/components/FloatingMenuCartWidget";
 import {
-  ShieldCheck,
   MapPin,
   Phone,
-  Bike,
 } from "lucide-react";
 
 export function Storefront() {
@@ -67,7 +64,7 @@ export function Storefront() {
                 </span>
               </div>
               <p className="text-xs text-[#A8A29E] leading-relaxed">
-                Cloud kitchen operating in Knowledge Park III, Greater Noida. Dedicated to
+                Cloud kitchen operating in Knowledge Park 3, Greater Noida. Dedicated to
                 fresh gourmet burgers, bowls, sides, and zero-compromise packaging.
               </p>
               <div className="text-[11px] text-[#78716C]">
@@ -88,46 +85,37 @@ export function Storefront() {
               </ul>
             </div>
 
-            {/* Col 3: Kitchen Location */}
+            {/* Col 3: Kitchen Timings & Fresh Delivery */}
             <div className="space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-[#FED7AA]">
-                Kitchen Location
+                Kitchen Hours
               </h4>
-              <div className="text-xs text-[#A8A29E] space-y-2">
+              <ul className="text-xs text-[#A8A29E] space-y-2">
+                <li>Monday – Sunday: 11:00 AM – 3:00 AM</li>
+                <li>Late night doorstep delivery</li>
+                <li>Serving hostels & colleges across Knowledge Park</li>
+              </ul>
+            </div>
+
+            {/* Col 4: Kitchen Location & Contact */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-[#FED7AA]">
+                Kitchen Location & Helpline
+              </h4>
+              <div className="text-xs text-[#A8A29E] space-y-2.5">
                 <p className="flex items-start gap-2">
                   <MapPin className="w-4 h-4 text-[#C2410C] shrink-0 mt-0.5" />
-                  <span>Knowledge Park III, Near Sharda University, Greater Noida - 201310</span>
+                  <span>Nalanda living boys hostel , near NIET BUISNESS SCHOOL, knowledge park 3</span>
                 </p>
                 <p className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-[#C2410C] shrink-0" />
-                  <span>Kitchen Helpline: +91 62976 73521</span>
+                  <a
+                    href="tel:9625750927"
+                    className="font-bold text-white hover:text-[#FED7AA] transition-colors"
+                  >
+                    Helpline: +91 96257 50927
+                  </a>
                 </p>
-              </div>
-            </div>
-
-            {/* Col 4: Quick Portals */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-[#FED7AA]">
-                Staff & Operations
-              </h4>
-              <p className="text-xs text-[#A8A29E]">
-                Kitchen managers and riders can access real-time dispatch, order status advancement, and menu stock controls.
-              </p>
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Link
-                  href="/admin"
-                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-[#C2410C] text-white text-xs font-semibold hover:bg-[#9A3412] transition-colors"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Admin Dashboard</span>
-                </Link>
-                <Link
-                  href="/driver"
-                  className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/10 text-white text-xs font-semibold hover:bg-white/20 transition-colors"
-                >
-                  <Bike className="w-4 h-4" />
-                  <span>Driver Hub</span>
-                </Link>
               </div>
             </div>
           </div>
@@ -137,9 +125,6 @@ export function Storefront() {
             <div className="flex gap-6">
               <span>Privacy Policy</span>
               <span>Terms of Service</span>
-              <Link href="/driver" className="hover:text-white transition-colors">
-                Driver Portal
-              </Link>
             </div>
           </div>
         </div>

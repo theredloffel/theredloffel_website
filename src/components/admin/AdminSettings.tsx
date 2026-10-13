@@ -532,9 +532,9 @@ export function AdminSettings({
                     Dark Kitchen Hub Address
                   </span>
                   <p className="font-bold text-[#1C1917] leading-snug">
-                    Knowledge Park III, Near Sharda University, Greater Noida, UP - 201310
+                    Nalanda living boys hostel , near NIET BUISNESS SCHOOL, knowledge park 3
                   </p>
-                  <p className="text-[#A8A29E] text-[11px]">Landmark: Near Sharda University / Knowledge Park III</p>
+                  <p className="text-[#A8A29E] text-[11px]">Landmark: Near NIET Business School / Knowledge Park 3</p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-[#FAF8F5] border border-[#E7E0D8] space-y-1">
@@ -554,7 +554,7 @@ export function AdminSettings({
                     Kitchen Dispatch Hotline
                   </span>
                   <p className="font-mono font-bold text-sm text-[#1C1917]">
-                    +91 62976 73521
+                    +91 96257 50927
                   </p>
                   <p className="text-[#78716C] text-[11px]">
                     Direct line for delivery riders & kitchen queries
