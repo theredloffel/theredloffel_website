@@ -128,7 +128,7 @@ export function Header() {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for restaurant, cuisine or a dish"
+                  placeholder='Search "burgers, pasta, maggi, shakes..."'
                   className="w-full bg-transparent text-xs text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-hidden"
                 />
                 {searchQuery ? (
@@ -317,7 +317,7 @@ export function Header() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder='Search "wood-fired pizza, truffle pasta..."'
+                placeholder='Search "burgers, pasta, maggi, shakes..."'
                 className="w-full bg-transparent text-xs text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-hidden"
               />
               {searchQuery ? (

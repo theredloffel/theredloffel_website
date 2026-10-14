@@ -323,7 +323,7 @@ export function CouponManager() {
               </label>
               <input
                 type="text"
-                placeholder="e.g. Valid on all wood-fired pizzas and gourmet pasta dishes"
+                placeholder="e.g. Valid on all gourmet burgers, pasta, and bowls"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl border border-[#E7E0D8] bg-white text-xs text-[#1C1917] focus:outline-hidden focus:border-[#C2410C]"

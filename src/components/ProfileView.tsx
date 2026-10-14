@@ -523,28 +523,6 @@ export function ProfileView() {
                         ))}
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-2 border-t border-[#E7E0D8] bg-[#FAF8F5]/50">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          showToast("Order items added to your cart!", "success");
-                          router.push("/");
-                        }}
-                        className="py-3 text-center text-sm font-bold text-emerald-700 hover:bg-emerald-50/80 transition-colors"
-                      >
-                        Reorder
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          showToast("Thank you for your rating!", "success");
-                        }}
-                        className="py-3 text-center text-sm font-bold text-[#78716C] hover:bg-[#F5EFEB] transition-colors border-l border-[#E7E0D8]"
-                      >
-                        Rate Order
-                      </button>
-                    </div>
                   </div>
                 ))
               )}

@@ -685,29 +685,6 @@ export function AuthModal() {
                             ))}
                           </div>
                         </div>
-
-                        {/* Reorder and Rate Order Action Buttons */}
-                        <div className="grid grid-cols-2 border-t border-[#E7E0D8] bg-[#FAF8F5]/50">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              showToast("Order items added to your cart!", "success");
-                              setIsAuthOpen(false);
-                            }}
-                            className="py-3 text-center text-sm font-bold text-emerald-700 hover:bg-emerald-50/80 transition-colors"
-                          >
-                            Reorder
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              showToast("Thank you for rating 5 stars! ⭐⭐⭐⭐⭐", "success");
-                            }}
-                            className="py-3 text-center text-sm font-bold text-emerald-700 border-l border-[#E7E0D8] hover:bg-emerald-50/80 transition-colors"
-                          >
-                            Rate order
-                          </button>
-                        </div>
                       </div>
                     ))
                   )}

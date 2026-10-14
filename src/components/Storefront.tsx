@@ -79,7 +79,7 @@ export function Storefront() {
               </h4>
               <ul className="text-xs text-[#A8A29E] space-y-2">
                 <li>Fresh Gourmet Delicacies</li>
-                <li>Wood-Fired Oven & Fresh Burgers</li>
+                <li>Fresh Gourmet Burgers & Delicacies</li>
                 <li>Zero-Compromise Thermal Packaging</li>
                 <li className="text-emerald-400 font-semibold">• Live Orders Active</li>
               </ul>
@@ -91,7 +91,7 @@ export function Storefront() {
                 Kitchen Hours
               </h4>
               <ul className="text-xs text-[#A8A29E] space-y-2">
-                <li>Monday – Sunday: 11:00 AM – 3:00 AM</li>
+                <li>Monday – Sunday: 5:00 PM – 3:00 AM</li>
                 <li>Late night doorstep delivery</li>
                 <li>Serving hostels & colleges across Knowledge Park</li>
               </ul>
