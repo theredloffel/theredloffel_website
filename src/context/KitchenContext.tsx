@@ -1055,8 +1055,8 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
 
   // Menu items manager
   const toggleAvailability = (itemId: string) => {
-    setMenuItems((prev) =>
-      prev.map((item) => {
+    setMenuItems((prev) => {
+      const updated = prev.map((item) => {
         if (item.id === itemId) {
           const updatedState = !item.isAvailable;
           menuService.toggleAvailability(itemId, updatedState);
@@ -1067,8 +1067,12 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
           return { ...item, isAvailable: updatedState };
         }
         return item;
-      })
-    );
+      });
+      try {
+        localStorage.setItem("lebistro_menu", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   const updateItemPrice = (itemId: string, newPrice: number) => {

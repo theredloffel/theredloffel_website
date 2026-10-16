@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useKitchen } from "@/context/KitchenContext";
 import { MenuItem, Category } from "@/types";
 import { EditItemModal } from "./EditItemModal";
+import { ItemStockConfirmModal } from "./ItemStockConfirmModal";
 import {
   Search,
   Check,
@@ -26,6 +27,7 @@ export function MenuManager() {
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [pendingStockItem, setPendingStockItem] = useState<MenuItem | null>(null);
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [tempPrice, setTempPrice] = useState<number>(0);
 
@@ -96,17 +98,48 @@ export function MenuManager() {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-[#E7E0D8] bg-[#F5EFEB]/60 text-[#78716C] uppercase font-bold text-[10px] tracking-wider">
+                <th className="py-4 px-6">Stock Status</th>
                 <th className="py-4 px-6">Dish Details</th>
                 <th className="py-4 px-6">Category</th>
                 <th className="py-4 px-6">Dietary</th>
                 <th className="py-4 px-6">Price (₹ INR)</th>
-                <th className="py-4 px-6">Stock Status</th>
                 <th className="py-4 px-6 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F5EFEB]">
               {filteredItems.map((item) => (
                 <tr key={item.id} className="hover:bg-[#FAF8F5]/80 transition-colors">
+                  {/* 1. Quick Stock Toggle Button (First Column) */}
+                  <td className="py-4 px-6">
+                    <button
+                      type="button"
+                      onClick={() => setPendingStockItem(item)}
+                      className={`inline-flex items-center gap-2.5 px-3 py-1.5 rounded-2xl font-bold text-xs border transition-all cursor-pointer shadow-2xs group ${
+                        item.isAvailable
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300"
+                          : "bg-rose-50 text-rose-800 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
+                      }`}
+                      title={
+                        item.isAvailable
+                          ? "Click to mark this item Out of Stock"
+                          : "Click to mark this item In Stock"
+                      }
+                    >
+                      <div
+                        className={`w-7 h-4 rounded-full p-0.5 transition-colors flex items-center shrink-0 ${
+                          item.isAvailable
+                            ? "bg-emerald-600 justify-end group-hover:bg-rose-600"
+                            : "bg-rose-600 justify-start group-hover:bg-emerald-600"
+                        }`}
+                      >
+                        <div className="w-3 h-3 rounded-full bg-white shadow-xs" />
+                      </div>
+                      <span className="whitespace-nowrap">
+                        {item.isAvailable ? "In Stock" : "Out of Stock"}
+                      </span>
+                    </button>
+                  </td>
+
                   {/* Dish Title & Image */}
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
@@ -193,30 +226,11 @@ export function MenuManager() {
                     )}
                   </td>
 
-                  {/* Inline Stock Toggle */}
-                  <td className="py-4 px-6">
-                    <button
-                      onClick={() => toggleAvailability(item.id)}
-                      className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full font-semibold text-xs border transition-all ${
-                        item.isAvailable
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
-                          : "bg-red-50 text-red-800 border-red-200 hover:bg-red-100"
-                      }`}
-                    >
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          item.isAvailable ? "bg-emerald-600" : "bg-red-600"
-                        }`}
-                      />
-                      <span>{item.isAvailable ? "In Stock" : "Out of Stock"}</span>
-                    </button>
-                  </td>
-
                   {/* Edit Details Action */}
                   <td className="py-4 px-6 text-right">
                     <button
                       onClick={() => setEditingItem(item)}
-                      className="px-3 py-1.5 rounded-xl border border-[#E7E0D8] bg-[#FAF8F5] text-[#1C1917] hover:border-[#C2410C] hover:text-[#C2410C] font-semibold text-xs transition-colors"
+                      className="px-3 py-1.5 rounded-xl border border-[#E7E0D8] bg-[#FAF8F5] text-[#1C1917] hover:border-[#C2410C] hover:text-[#C2410C] font-semibold text-xs transition-colors cursor-pointer"
                     >
                       Edit Details
                     </button>
@@ -233,6 +247,19 @@ export function MenuManager() {
         item={editingItem}
         onClose={() => setEditingItem(null)}
         onSave={updateItemDetails}
+      />
+
+      {/* Stock Status Change Confirmation Modal */}
+      <ItemStockConfirmModal
+        isOpen={pendingStockItem !== null}
+        item={pendingStockItem}
+        onConfirm={() => {
+          if (pendingStockItem) {
+            toggleAvailability(pendingStockItem.id);
+            setPendingStockItem(null);
+          }
+        }}
+        onCancel={() => setPendingStockItem(null)}
       />
     </div>
   );

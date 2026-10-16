@@ -98,10 +98,12 @@ export function MenuSection() {
             )}
           </div>
 
+          {/* Transparent Out of Stock Banner in the bottom of food image */}
           {!item.isAvailable && (
-            <div className="absolute inset-0 bg-black/65 backdrop-blur-2xs flex items-center justify-center">
-              <span className="px-3 py-1 rounded-full bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider">
-                Sold Out
+            <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-xs py-1.5 px-3 flex items-center justify-center gap-1.5 border-t border-white/10 text-white shadow-xs">
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
+              <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#FAF8F5]">
+                Out of Stock
               </span>
             </div>
           )}
@@ -117,10 +119,17 @@ export function MenuSection() {
             <span className="font-medium text-[#1C1917]">Serves 1</span>
           </div>
 
-          {/* ADD Button (matching reference image) */}
+          {/* ADD Button */}
           <div className="shrink-0">
             {!item.isAvailable ? (
-              <span className="text-[10px] text-[#A8A29E] font-semibold">Unavailable</span>
+              <button
+                type="button"
+                disabled
+                className="px-3.5 py-1 rounded-xl bg-[#F5EFEB] border border-[#E7E0D8] text-[#A8A29E] cursor-not-allowed text-xs font-bold shadow-none opacity-60 tracking-wider select-none"
+                title="This item is currently out of stock"
+              >
+                ADD
+              </button>
             ) : quantity === 0 ? (
               <button
                 type="button"
