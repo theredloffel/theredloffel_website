@@ -87,27 +87,27 @@ export function Header() {
         />
         <div className="running-marquee-track">
           <div className="flex items-center gap-6 shrink-0 pr-6">
-            <span>🎉 Opening on 17 Oct 2026</span>
+            <span>🎉 Opening on 18 Oct 2026</span>
             <span>•</span>
             <span>The Red Löffel Cloud Kitchen</span>
             <span>•</span>
-            <span>Opening on 17 Oct 2026</span>
+            <span>Opening on 18 Oct 2026</span>
             <span>•</span>
             <span>Orders Open Soon</span>
             <span>•</span>
-            <span>Opening on 17 Oct 2026</span>
+            <span>Opening on 18 Oct 2026</span>
             <span>•</span>
           </div>
           <div className="flex items-center gap-6 shrink-0 pr-6" aria-hidden="true">
-            <span>🎉 Opening on 17 Oct 2026</span>
+            <span>🎉 Opening on 18 Oct 2026</span>
             <span>•</span>
             <span>The Red Löffel Cloud Kitchen</span>
             <span>•</span>
-            <span>Opening on 17 Oct 2026</span>
+            <span>Opening on 18 Oct 2026</span>
             <span>•</span>
             <span>Orders Open Soon</span>
             <span>•</span>
-            <span>Opening on 17 Oct 2026</span>
+            <span>Opening on 18 Oct 2026</span>
             <span>•</span>
           </div>
         </div>
