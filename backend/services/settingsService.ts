@@ -7,6 +7,7 @@ export const settingsService = {
    */
   async fetchSettings(): Promise<{
     baseDeliveryCharge?: number;
+    freeDeliveryThreshold?: number;
     isStoreOpen?: boolean;
     deliveryRiders?: Rider[];
     error: string | null;
@@ -16,12 +17,15 @@ export const settingsService = {
       if (error) return { error: error.message };
 
       let baseDeliveryCharge: number | undefined;
+      let freeDeliveryThreshold: number | undefined;
       let isStoreOpen: boolean | undefined;
       let deliveryRiders: Rider[] | undefined;
 
       (data || []).forEach((row) => {
         if (row.key === "base_delivery_charge") {
           baseDeliveryCharge = Number(row.value);
+        } else if (row.key === "free_delivery_threshold") {
+          freeDeliveryThreshold = Number(row.value);
         } else if (row.key === "is_store_open") {
           isStoreOpen = Boolean(row.value);
         } else if (row.key === "delivery_riders" && Array.isArray(row.value)) {
@@ -29,7 +33,7 @@ export const settingsService = {
         }
       });
 
-      return { baseDeliveryCharge, isStoreOpen, deliveryRiders, error: null };
+      return { baseDeliveryCharge, freeDeliveryThreshold, isStoreOpen, deliveryRiders, error: null };
     } catch (err: any) {
       return { error: err.message || "Failed to fetch settings" };
     }
@@ -47,6 +51,21 @@ export const settingsService = {
       return { success: true, error: null };
     } catch (err: any) {
       return { success: false, error: err.message || "Failed to update delivery charge" };
+    }
+  },
+
+  /**
+   * Update free delivery minimum order threshold
+   */
+  async updateFreeDeliveryThreshold(threshold: number): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const { error } = await supabase
+        .from("store_settings")
+        .upsert({ key: "free_delivery_threshold", value: threshold });
+      if (error) return { success: false, error: error.message };
+      return { success: true, error: null };
+    } catch (err: any) {
+      return { success: false, error: err.message || "Failed to update free delivery threshold" };
     }
   },
 

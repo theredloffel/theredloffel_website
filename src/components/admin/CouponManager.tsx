@@ -27,12 +27,24 @@ export function CouponManager() {
     toggleCouponStatus,
     baseDeliveryCharge,
     updateBaseDeliveryCharge,
+    freeDeliveryThreshold,
+    updateFreeDeliveryThreshold,
     showToast,
   } = useKitchen();
 
-  // Delivery charge editing state
+  // Delivery charge & Free delivery threshold editing state
   const [deliveryChargeInput, setDeliveryChargeInput] = useState<number>(baseDeliveryCharge);
+  const [freeDeliveryThresholdInput, setFreeDeliveryThresholdInput] = useState<number>(freeDeliveryThreshold);
   const [isDeliveryChargeSaving, setIsDeliveryChargeSaving] = useState(false);
+  const [isThresholdSaving, setIsThresholdSaving] = useState(false);
+
+  React.useEffect(() => {
+    setDeliveryChargeInput(baseDeliveryCharge);
+  }, [baseDeliveryCharge]);
+
+  React.useEffect(() => {
+    setFreeDeliveryThresholdInput(freeDeliveryThreshold);
+  }, [freeDeliveryThreshold]);
 
   // New coupon form state
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
@@ -50,6 +62,15 @@ export function CouponManager() {
     updateBaseDeliveryCharge(deliveryChargeInput);
     setTimeout(() => {
       setIsDeliveryChargeSaving(false);
+    }, 300);
+  };
+
+  const handleSaveFreeDeliveryThreshold = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsThresholdSaving(true);
+    updateFreeDeliveryThreshold(freeDeliveryThresholdInput);
+    setTimeout(() => {
+      setIsThresholdSaving(false);
     }, 300);
   };
 
@@ -95,37 +116,88 @@ export function CouponManager() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-150">
-      {/* 1. TOP HEADER & DELIVERY CHARGES SECTION */}
-      <div className="bg-white rounded-3xl border border-[#E7E0D8] p-6 sm:p-7 shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-[#FFF7ED] text-[#C2410C] flex items-center justify-center shrink-0 border border-orange-200">
-              <Tag className="w-6 h-6 text-[#C2410C]" />
-            </div>
-            <div>
-              <h2 className="font-serif text-xl sm:text-2xl font-bold text-[#1C1917]">
-                Coupons & Delivery Fee Management
-              </h2>
-              <p className="text-xs text-[#78716C] mt-0.5">
-                Configure default free delivery threshold, standard delivery charges, and promotional coupon codes.
-              </p>
-            </div>
+      {/* 1. TOP HEADER & DELIVERY CHARGES / FREE DELIVERY THRESHOLD SECTION */}
+      <div className="bg-white rounded-3xl border border-[#E7E0D8] p-6 sm:p-7 shadow-xs space-y-6">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-2xl bg-[#FFF7ED] text-[#C2410C] flex items-center justify-center shrink-0 border border-orange-200">
+            <Tag className="w-6 h-6 text-[#C2410C]" />
           </div>
+          <div>
+            <h2 className="font-serif text-xl sm:text-2xl font-bold text-[#1C1917]">
+              Coupons & Delivery Fee Management
+            </h2>
+            <p className="text-xs text-[#78716C] mt-0.5">
+              Set custom free delivery order threshold, standard delivery charges, and promotional coupon codes.
+            </p>
+          </div>
+        </div>
 
-          {/* EDIT DELIVERY CHARGE FORM */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+          {/* EDIT FREE DELIVERY THRESHOLD FORM */}
           <form
-            onSubmit={handleSaveDeliveryCharge}
-            className="flex items-center gap-3 p-3 rounded-2xl bg-[#FAF8F5] border border-[#E7E0D8] shrink-0"
+            onSubmit={handleSaveFreeDeliveryThreshold}
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-50/70 to-emerald-50/30 border border-emerald-200"
           >
-            <div className="flex items-center gap-2">
-              <Bike className="w-4 h-4 text-[#C2410C]" />
-              <div className="text-xs">
-                <span className="font-bold text-[#1C1917] block">Standard Delivery Fee</span>
-                <span className="text-[10px] text-[#78716C]">Orders below free tier</span>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-600/10 text-emerald-800 flex items-center justify-center shrink-0 mt-0.5">
+                <Sparkles className="w-5 h-5 text-emerald-700" />
+              </div>
+              <div>
+                <span className="font-bold text-xs text-emerald-950 block">
+                  Free Delivery Above
+                </span>
+                <span className="text-[11px] text-emerald-800 leading-snug block mt-0.5">
+                  Customers automatically get free delivery once cart reaches this amount (no coupon needed).
+                </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pl-2 border-l border-[#E7E0D8]">
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="relative w-24">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#78716C]">
+                  ₹
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max="5000"
+                  value={freeDeliveryThresholdInput}
+                  onChange={(e) => setFreeDeliveryThresholdInput(Number(e.target.value))}
+                  className="w-full pl-7 pr-3 py-1.5 rounded-xl border border-emerald-300 bg-white font-mono font-bold text-xs text-[#1C1917] focus:outline-hidden focus:border-emerald-600"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isThresholdSaving}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>Save</span>
+              </button>
+            </div>
+          </form>
+
+          {/* EDIT STANDARD DELIVERY CHARGE FORM */}
+          <form
+            onSubmit={handleSaveDeliveryCharge}
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#FAF8F5] border border-[#E7E0D8]"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#C2410C] flex items-center justify-center shrink-0 mt-0.5">
+                <Bike className="w-5 h-5 text-[#C2410C]" />
+              </div>
+              <div>
+                <span className="font-bold text-xs text-[#1C1917] block">
+                  Standard Delivery Fee
+                </span>
+                <span className="text-[11px] text-[#78716C] leading-snug block mt-0.5">
+                  Charged only when cart subtotal is below ₹{freeDeliveryThreshold}.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
               <div className="relative w-24">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[#78716C]">
                   ₹
@@ -150,40 +222,6 @@ export function CouponManager() {
               </button>
             </div>
           </form>
-        </div>
-      </div>
-
-      {/* 2. DEFAULT COUPON HIGHLIGHT: FREE DELIVERY ABOVE ₹199 */}
-      <div className="bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent rounded-3xl border border-emerald-500/30 p-6 shadow-xs relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-500/30">
-              <Bike className="w-6 h-6 text-emerald-700" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-black text-emerald-950 px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30">
-                  FREE199
-                </span>
-                <span className="text-[10px] uppercase font-bold text-emerald-900 bg-white/80 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  Default Core Offer
-                </span>
-              </div>
-              <h3 className="font-serif text-lg font-bold text-[#1C1917] mt-1">
-                Free Delivery Above ₹199
-              </h3>
-              <p className="text-xs text-emerald-900/80 mt-0.5">
-                Customers with cart exceeding ₹199 can apply this coupon in their cart slider for 100% free delivery. Orders without this coupon incur the standard ₹{baseDeliveryCharge} delivery charge.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="px-3 py-1.5 rounded-xl bg-white text-emerald-800 border border-emerald-300 font-bold text-xs flex items-center gap-1.5 shadow-2xs">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Active on Customer Cart</span>
-            </span>
-          </div>
         </div>
       </div>
 
