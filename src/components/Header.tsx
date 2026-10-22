@@ -64,54 +64,6 @@ export function Header() {
 
   return (
     <header suppressHydrationWarning className="relative w-full z-40">
-      {/* Running Announcement Banner at top of navbar */}
-      <div className="w-full bg-[#C2410C] text-white py-1 text-[11px] sm:text-xs font-semibold overflow-hidden select-none tracking-wide shadow-2xs">
-        <style
-          dangerouslySetInnerHTML={{
-            __html: `
-              @keyframes runningBannerScroll {
-                0% { transform: translate3d(0, 0, 0); }
-                100% { transform: translate3d(-50%, 0, 0); }
-              }
-              .running-marquee-track {
-                display: flex !important;
-                width: max-content !important;
-                animation: runningBannerScroll 18s linear infinite !important;
-                will-change: transform;
-              }
-              .running-marquee-track:hover {
-                animation-play-state: paused !important;
-              }
-            `,
-          }}
-        />
-        <div className="running-marquee-track">
-          <div className="flex items-center gap-6 shrink-0 pr-6">
-            <span>🎉 Opening on 18 Oct 2026</span>
-            <span>•</span>
-            <span>The Red Löffel Cloud Kitchen</span>
-            <span>•</span>
-            <span>Opening on 18 Oct 2026</span>
-            <span>•</span>
-            <span>Orders Open Soon</span>
-            <span>•</span>
-            <span>Opening on 18 Oct 2026</span>
-            <span>•</span>
-          </div>
-          <div className="flex items-center gap-6 shrink-0 pr-6" aria-hidden="true">
-            <span>🎉 Opening on 18 Oct 2026</span>
-            <span>•</span>
-            <span>The Red Löffel Cloud Kitchen</span>
-            <span>•</span>
-            <span>Opening on 18 Oct 2026</span>
-            <span>•</span>
-            <span>Orders Open Soon</span>
-            <span>•</span>
-            <span>Opening on 18 Oct 2026</span>
-            <span>•</span>
-          </div>
-        </div>
-      </div>
 
       {/* ========================================================= */}
       {/* DESKTOP HEADER (Fixed at top when scrolled) */}

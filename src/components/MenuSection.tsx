@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useKitchen } from "@/context/KitchenContext";
 import { Category, MenuItem } from "@/types";
 import { Plus, Minus, AlertCircle, Flame, Star, Check } from "lucide-react";
+import { ItemCustomizationModal, CustomSizeOption } from "./ItemCustomizationModal";
 
 const MENU_CATEGORIES: Category[] = [
   "All",
@@ -45,11 +46,104 @@ export function MenuSection() {
     setIsVegOnly,
     selectedCategory,
     setSelectedCategory,
+    showToast,
   } = useKitchen();
 
-  const getItemQuantityInCart = (itemId: string) => {
-    const itemInCart = cart.find((ci) => ci.item.id === itemId);
-    return itemInCart ? itemInCart.quantity : 0;
+  const [customizingItem, setCustomizingItem] = useState<MenuItem | null>(null);
+
+  // Helper to extract clean base name without size suffixes like "(Small)" or "(Large)"
+  const getBaseDishName = (name: string) => {
+    return name.replace(/\s*\((Small|Large|Half|Full|Regular)\)/i, "").trim();
+  };
+
+  // Group menu items by base dish name
+  const dishVariantsMap = useMemo(() => {
+    const map: Record<string, MenuItem[]> = {};
+    menuItems.forEach((item) => {
+      const base = getBaseDishName(item.name);
+      if (!map[base]) {
+        map[base] = [];
+      }
+      map[base].push(item);
+    });
+    // Sort variants by price ascending (lowest price first)
+    Object.keys(map).forEach((key) => {
+      map[key].sort((a, b) => a.price - b.price);
+    });
+    return map;
+  }, [menuItems]);
+
+  // Keep only ONE card in the front for items with different sizes, keeping the lower price one
+  const deduplicateMenuForFront = (items: MenuItem[]) => {
+    const seenBaseNames = new Set<string>();
+    const result: MenuItem[] = [];
+
+    for (const item of items) {
+      const base = getBaseDishName(item.name);
+      const variants = dishVariantsMap[base];
+      if (variants && variants.length > 1) {
+        if (!seenBaseNames.has(base)) {
+          seenBaseNames.add(base);
+          // Lowest price one is placed in the front
+          result.push(variants[0]);
+        }
+      } else {
+        result.push(item);
+      }
+    }
+    return result;
+  };
+
+  // Only items with genuine Small and Large options will open the size selector modal
+  const hasSmallAndLarge = (itm: MenuItem) => {
+    const base = getBaseDishName(itm.name);
+    const variants = dishVariantsMap[base];
+    if (variants && variants.length > 1) return true;
+    if (itm.category === "Pasta" || itm.name.toLowerCase().includes("pasta")) return true;
+    return false;
+  };
+
+  const getSizeOptionsForItem = (item: MenuItem): CustomSizeOption[] => {
+    const base = getBaseDishName(item.name);
+    const variants = dishVariantsMap[base];
+    if (variants && variants.length > 1) {
+      return variants.map((v) => {
+        const isSmall = v.name.toLowerCase().includes("small");
+        return {
+          id: v.id,
+          name: isSmall ? "Small" : "Large",
+          price: v.price, // Exact price from the menu! (e.g. Chilli Potato: Small ₹70, Large ₹100)
+          item: v,
+        };
+      });
+    }
+
+    const lower = item.name.toLowerCase();
+    if (lower.includes("white sauce pasta")) {
+      return [
+        { id: `${item.id}-small`, name: "Small", price: item.price, item }, // item.price is 120 matching the menu!
+        { id: `${item.id}-large`, name: "Large", price: 175, item: { ...item, id: `${item.id}-large`, price: 175 } },
+      ];
+    }
+    if (item.category === "Pasta") {
+      return [
+        { id: `${item.id}-small`, name: "Small", price: item.price, item },
+        { id: `${item.id}-large`, name: "Large", price: item.price + 55, item: { ...item, id: `${item.id}-large`, price: item.price + 55 } },
+      ];
+    }
+    return [
+      { id: `${item.id}-small`, name: "Small", price: item.price, item },
+      { id: `${item.id}-large`, name: "Large", price: item.price + 40, item: { ...item, id: `${item.id}-large`, price: item.price + 40 } },
+    ];
+  };
+
+  const getItemQuantityInCart = (item: MenuItem) => {
+    const base = getBaseDishName(item.name);
+    const variants = dishVariantsMap[base] || [item];
+    const variantIds = variants.map((v) => v.id);
+    return cart
+      .filter((ci) => variantIds.includes(ci.item.id) || ci.item.id.startsWith(item.id))
+      .reduce((sum, ci) => sum + ci.quantity, 0);
   };
 
   // Helper to filter items by search and veg flag
@@ -66,20 +160,44 @@ export function MenuSection() {
     return true;
   };
 
+  const handleRemoveFromCart = (item: MenuItem) => {
+    const base = getBaseDishName(item.name);
+    const variants = dishVariantsMap[base] || [item];
+    const variantIds = variants.map((v) => v.id);
+    const inCart = cart.find(
+      (ci) => variantIds.includes(ci.item.id) || ci.item.id.startsWith(item.id)
+    );
+    if (inCart) {
+      removeFromCart(inCart.item.id);
+    } else {
+      removeFromCart(item.id);
+    }
+  };
+
   // Render individual 2-column food card (matching reference screenshot)
   const renderFoodCard = (item: MenuItem) => {
-    const quantity = getItemQuantityInCart(item.id);
+    const quantity = getItemQuantityInCart(item);
+    const hasSizes = hasSmallAndLarge(item);
+    const cleanTitle = getBaseDishName(item.name);
+    const cleanDesc = item.description.replace(/\s*\(Portion:\s*(Small|Large)\)/i, "");
 
     return (
       <div
         key={item.id}
-        className="group relative flex flex-col bg-white rounded-2xl sm:rounded-3xl border border-[#E7E0D8] overflow-hidden shadow-2xs hover:shadow-lg hover:border-[#C2410C]/40 transition-all duration-300"
+        onClick={() => {
+          if (hasSizes && item.isAvailable) {
+            setCustomizingItem(item);
+          }
+        }}
+        className={`group relative flex flex-col bg-white rounded-2xl sm:rounded-3xl border border-[#E7E0D8] overflow-hidden shadow-2xs hover:shadow-lg hover:border-[#C2410C]/40 transition-all duration-300 ${
+          hasSizes && item.isAvailable ? "cursor-pointer" : ""
+        }`}
       >
         {/* Top: Food Image */}
         <div className="relative h-36 sm:h-44 md:h-48 w-full overflow-hidden bg-[#F5EFEB]">
           <img
             src={item.image}
-            alt={item.name}
+            alt={cleanTitle}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             loading="lazy"
           />
@@ -110,7 +228,7 @@ export function MenuSection() {
         </div>
 
         {/* Middle: Info Strip (Serves 1, ADD Button) */}
-        <div className="px-3 pt-2.5 pb-1 flex items-center justify-between border-b border-[#F5EFEB] bg-[#FAF8F5]/60 text-[#78716C] text-[10px]">
+        <div className="px-3 pt-2 pb-1.5 flex items-center justify-between border-b border-[#F5EFEB] bg-[#FAF8F5]/60 text-[#78716C] text-[10px]">
           <div className="flex items-center gap-1.5">
             {/* Green Veg Dot Indicator */}
             <div className="w-3.5 h-3.5 rounded-xs border border-emerald-600 flex items-center justify-center bg-white shrink-0">
@@ -119,8 +237,8 @@ export function MenuSection() {
             <span className="font-medium text-[#1C1917]">Serves 1</span>
           </div>
 
-          {/* ADD Button */}
-          <div className="shrink-0">
+          {/* ADD Button: Shows customisable only when item has Small/Large options */}
+          <div className="shrink-0 flex flex-col items-center">
             {!item.isAvailable ? (
               <button
                 type="button"
@@ -131,30 +249,75 @@ export function MenuSection() {
                 ADD
               </button>
             ) : quantity === 0 ? (
-              <button
-                type="button"
-                onClick={() => addToCart(item)}
-                className="px-3.5 py-1 rounded-xl bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all text-xs font-black shadow-xs tracking-wider"
-              >
-                ADD
-              </button>
+              <div className="flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (hasSizes) {
+                      // Ask first to select Small or Large!
+                      setCustomizingItem(item);
+                    } else {
+                      addToCart(item);
+                    }
+                  }}
+                  className="px-3.5 py-1 rounded-xl bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all text-xs font-black shadow-xs tracking-wider"
+                >
+                  ADD
+                </button>
+                {hasSizes && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCustomizingItem(item);
+                    }}
+                    className="text-[9px] text-[#78716C] hover:text-[#C2410C] font-semibold text-center block mt-0.5 select-none leading-none cursor-pointer"
+                  >
+                    customisable
+                  </button>
+                )}
+              </div>
             ) : (
-              <div className="flex items-center rounded-xl bg-emerald-700 text-white shadow-xs p-0.5 text-xs font-bold">
-                <button
-                  type="button"
-                  onClick={() => removeFromCart(item.id)}
-                  className="w-5 h-5 flex items-center justify-center hover:bg-black/20 rounded-md active:scale-90"
+              <div className="flex flex-col items-center">
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center rounded-xl bg-emerald-700 text-white shadow-xs p-0.5 text-xs font-bold"
                 >
-                  <Minus className="w-3 h-3" />
-                </button>
-                <span className="w-5 text-center text-xs">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => addToCart(item)}
-                  className="w-5 h-5 flex items-center justify-center hover:bg-black/20 rounded-md active:scale-90"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFromCart(item)}
+                    className="w-5 h-5 flex items-center justify-center hover:bg-black/20 rounded-md active:scale-90"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="w-5 text-center text-xs">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (hasSizes) {
+                        setCustomizingItem(item);
+                      } else {
+                        addToCart(item);
+                      }
+                    }}
+                    className="w-5 h-5 flex items-center justify-center hover:bg-black/20 rounded-md active:scale-90"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+                {hasSizes && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCustomizingItem(item);
+                    }}
+                    className="text-[9px] text-[#78716C] hover:text-[#C2410C] font-semibold text-center block mt-0.5 select-none leading-none cursor-pointer"
+                  >
+                    customisable
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -170,11 +333,11 @@ export function MenuSection() {
             </div>
 
             <h3 className="font-bold text-xs sm:text-sm text-[#1C1917] line-clamp-1 group-hover:text-[#C2410C] transition-colors mt-0.5">
-              {item.name}
+              {cleanTitle}
             </h3>
 
             <p className="text-[11px] text-[#78716C] line-clamp-2 mt-1 leading-snug">
-              {item.description}
+              {cleanDesc}
             </p>
           </div>
         </div>
@@ -388,7 +551,7 @@ export function MenuSection() {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-              {menuItems.filter(filterItem).map(renderFoodCard)}
+              {deduplicateMenuForFront(menuItems.filter(filterItem)).map(renderFoodCard)}
             </div>
           )}
         </div>
@@ -422,9 +585,9 @@ export function MenuSection() {
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
-              {menuItems
-                .filter((item) => item.price <= 99 && filterItem(item))
-                .map(renderFoodCard)}
+              {deduplicateMenuForFront(
+                menuItems.filter((item) => item.price <= 99 && filterItem(item))
+              ).map(renderFoodCard)}
             </div>
           )}
         </div>
@@ -432,9 +595,10 @@ export function MenuSection() {
         /* Full Menu Mode: Starts directly from Burgers, then Parathas, Chinese, etc. All categories stay rendered! */
         <div className="space-y-10 sm:space-y-12">
           {ALL_SECTION_CATEGORIES.map((catName) => {
-            const categoryItems = menuItems.filter(
+            const rawItems = menuItems.filter(
               (item) => item.category === catName && filterItem(item)
             );
+            const categoryItems = deduplicateMenuForFront(rawItems);
 
             if (categoryItems.length === 0) return null;
 
@@ -464,6 +628,31 @@ export function MenuSection() {
           })}
         </div>
       )}
+
+      {/* Item Customization Bottom Sheet Modal */}
+      <ItemCustomizationModal
+        isOpen={!!customizingItem}
+        onClose={() => setCustomizingItem(null)}
+        item={customizingItem}
+        sizeOptions={customizingItem ? getSizeOptionsForItem(customizingItem) : []}
+        onAddToCart={(itm, config) => {
+          const targetItem: MenuItem = config.selectedItem || {
+            ...itm,
+            id: `${itm.id}-${config.size.toLowerCase()}`,
+            name: `${getBaseDishName(itm.name)} (${config.size})`,
+            price: config.unitPrice,
+          };
+          for (let i = 0; i < config.quantity; i++) {
+            addToCart(targetItem);
+          }
+          if (showToast) {
+            showToast(
+              `${getBaseDishName(itm.name)} (${config.size}) added to order!`,
+              "success"
+            );
+          }
+        }}
+      />
     </section>
   );
 }

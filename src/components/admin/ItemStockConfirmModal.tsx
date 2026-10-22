@@ -21,6 +21,8 @@ export function ItemStockConfirmModal({
 
   // If item is currently available, clicking will mark it OUT of stock
   const isMarkingOutOfStock = item.isAvailable;
+  const cleanName = item.name.replace(/\s*\((Small|Large)\)/i, "").trim();
+  const hasMultipleSizes = Boolean(item.name.match(/\((Small|Large)\)/i));
 
   return (
     <div className="fixed inset-0 z-60 overflow-hidden flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
@@ -67,13 +69,17 @@ export function ItemStockConfirmModal({
         <div className="space-y-1.5">
           <h3 className="font-serif text-xl font-bold text-white tracking-tight">
             {isMarkingOutOfStock
-              ? "Mark Item as Out of Stock?"
-              : "Restore Item to In Stock?"}
+              ? `Mark ${cleanName} Out of Stock?`
+              : `Restore ${cleanName} to In Stock?`}
           </h3>
           <p className="text-xs text-[#A8A29E] leading-relaxed">
             {isMarkingOutOfStock
-              ? "Are you sure you want to mark this item as Out of Stock? Customers will see this dish marked as unavailable in the kitchen."
-              : "Are you sure you want to mark this item as In Stock? The dish will be restored to active ordering."}
+              ? `Are you sure you want to mark ${cleanName} as Out of Stock? Customers will not be able to order this dish${
+                  hasMultipleSizes ? " (applies to both Small & Large portions)" : ""
+                }.`
+              : `Are you sure you want to mark ${cleanName} as In Stock? The dish will be restored to active ordering${
+                  hasMultipleSizes ? " (both Small & Large portions)" : ""
+                }.`}
           </p>
         </div>
 
@@ -81,17 +87,26 @@ export function ItemStockConfirmModal({
         <div className="p-3.5 rounded-2xl bg-[#292524]/60 border border-[#3E3835] flex items-center gap-3">
           <img
             src={item.image}
-            alt={item.name}
+            alt={cleanName}
             className="w-12 h-12 rounded-xl object-cover border border-[#3E3835] shrink-0"
           />
           <div className="min-w-0 flex-1">
             <h4 className="font-serif text-sm font-bold text-white truncate">
-              {item.name}
+              {cleanName}
             </h4>
             <div className="flex items-center gap-2 text-[11px] text-[#A8A29E] mt-0.5">
               <span>{item.category}</span>
-              <span>•</span>
-              <span className="font-bold text-[#FAF8F5]">₹{item.price}</span>
+              {hasMultipleSizes ? (
+                <>
+                  <span>•</span>
+                  <span className="text-amber-400 font-semibold">Small & Large</span>
+                </>
+              ) : (
+                <>
+                  <span>•</span>
+                  <span className="font-bold text-[#FAF8F5]">₹{item.price}</span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -111,8 +126,8 @@ export function ItemStockConfirmModal({
           )}
           <span className="font-medium">
             {isMarkingOutOfStock
-              ? "Stock status will change to: OUT OF STOCK"
-              : "Stock status will change to: IN STOCK"}
+              ? `Stock status will change to: OUT OF STOCK${hasMultipleSizes ? " (Both Sizes)" : ""}`
+              : `Stock status will change to: IN STOCK${hasMultipleSizes ? " (Both Sizes)" : ""}`}
           </span>
         </div>
 

@@ -38,6 +38,7 @@ export function CartDrawer() {
     packagingCharge,
     grandTotal,
     baseDeliveryCharge,
+    freeDeliveryThreshold,
     coupons,
     appliedCoupon,
     applyCoupon,
@@ -68,6 +69,10 @@ export function CartDrawer() {
     setIsCartOpen(false);
     setIsCheckoutOpen(true);
   };
+
+  const isFreeDeliveryUnlocked = cartSubtotal >= freeDeliveryThreshold;
+  const freeDeliveryAmountNeeded = Math.max(0, freeDeliveryThreshold - cartSubtotal);
+  const freeDeliveryProgress = Math.min(100, Math.round((cartSubtotal / freeDeliveryThreshold) * 100));
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden overscroll-contain animate-in fade-in duration-200">
@@ -135,6 +140,60 @@ export function CartDrawer() {
               </div>
             ) : (
               <>
+                {/* Free Delivery Automatic Progress Banner */}
+                {deliveryType === "Delivery" && (
+                  <div
+                    className={`p-3.5 rounded-2xl border transition-all ${
+                      isFreeDeliveryUnlocked
+                        ? "bg-emerald-50/90 border-emerald-300 text-emerald-950 shadow-2xs"
+                        : "bg-gradient-to-r from-orange-50/90 via-[#FFF7ED] to-white border-orange-200 text-[#1C1917] shadow-2xs"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-base shrink-0">
+                          {isFreeDeliveryUnlocked ? "🎉" : "🛵"}
+                        </span>
+                        <div className="min-w-0">
+                          {isFreeDeliveryUnlocked ? (
+                            <p className="font-bold text-emerald-900 truncate">
+                              You unlocked FREE Delivery!
+                            </p>
+                          ) : (
+                            <p className="text-[#1C1917] truncate font-medium">
+                              Add <span className="font-bold text-[#C2410C]">₹{freeDeliveryAmountNeeded}</span> more for <span className="font-bold text-emerald-700">FREE Delivery</span>
+                            </p>
+                          )}
+                          <p className="text-[10px] text-[#78716C] mt-0.5">
+                            {isFreeDeliveryUnlocked
+                              ? "100% free doorstep delivery applied automatically"
+                              : `Free delivery on all orders above ₹${freeDeliveryThreshold}`}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          isFreeDeliveryUnlocked
+                            ? "bg-emerald-600 text-white"
+                            : "bg-orange-100 text-[#C2410C] border border-orange-200"
+                        }`}
+                      >
+                        {isFreeDeliveryUnlocked ? "FREE" : `₹${baseDeliveryCharge}`}
+                      </span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-black/5 rounded-full h-1.5 mt-2.5 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${
+                          isFreeDeliveryUnlocked ? "bg-emerald-600" : "bg-[#C2410C]"
+                        }`}
+                        style={{ width: `${freeDeliveryProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Items List */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-[#78716C]">
@@ -402,7 +461,10 @@ export function CartDrawer() {
                       </span>
                     ) : (
                       <span className="font-semibold text-[#1C1917]">
-                        ₹{deliveryFee}
+                        ₹{deliveryFee}{" "}
+                        <span className="text-[10px] text-[#78716C] font-normal">
+                          (Free above ₹{freeDeliveryThreshold})
+                        </span>
                       </span>
                     )}
                   </div>

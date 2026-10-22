@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useKitchen } from "@/context/KitchenContext";
 import { MenuItem, Category } from "@/types";
 import { EditItemModal } from "./EditItemModal";
@@ -15,6 +15,20 @@ import {
   ToggleRight,
   Filter,
 } from "lucide-react";
+
+interface DishGroup {
+  key: string;
+  baseName: string;
+  category: Category | string;
+  primaryItem: MenuItem;
+  variants: MenuItem[];
+}
+
+const getBaseDishName = (name: string) =>
+  name.replace(/\s*\((Small|Large)\)/i, "").trim();
+
+const getCleanDescription = (desc: string) =>
+  desc.replace(/\s*\(?(Small|Large) portion\)?/i, "").trim();
 
 export function MenuManager() {
   const {
@@ -31,20 +45,60 @@ export function MenuManager() {
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [tempPrice, setTempPrice] = useState<number>(0);
 
-  const filteredItems = menuItems.filter((item) => {
-    if (selectedCategory !== "All" && item.category !== selectedCategory) {
-      return false;
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      return (
-        item.name.toLowerCase().includes(q) ||
-        item.description.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  // Group all menu items first so multi-size variants (e.g. Chilli Paneer Small & Large) are unified into 1 dish
+  const dishGroups = useMemo(() => {
+    const groups: DishGroup[] = [];
+    const map = new Map<string, DishGroup>();
+
+    menuItems.forEach((item) => {
+      const baseName = getBaseDishName(item.name);
+      const key = `${item.category}-${baseName.toLowerCase()}`;
+      if (!map.has(key)) {
+        const group: DishGroup = {
+          key,
+          baseName,
+          category: item.category,
+          primaryItem: item,
+          variants: [item],
+        };
+        map.set(key, group);
+        groups.push(group);
+      } else {
+        const group = map.get(key)!;
+        group.variants.push(item);
+        // Sort variants ascending by price (Small first, Large second)
+        group.variants.sort((a, b) => a.price - b.price);
+        // Keep the lower price / Small variant as representative primaryItem
+        if (item.name.toLowerCase().includes("(small)") || item.price < group.primaryItem.price) {
+          group.primaryItem = item;
+        }
+      }
+    });
+
+    return groups;
+  }, [menuItems]);
+
+  const filteredGroups = useMemo(() => {
+    return dishGroups.filter((group) => {
+      if (selectedCategory !== "All" && group.category !== selectedCategory) {
+        return false;
+      }
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        return (
+          group.baseName.toLowerCase().includes(q) ||
+          group.primaryItem.description.toLowerCase().includes(q) ||
+          group.category.toLowerCase().includes(q) ||
+          group.variants.some(
+            (v) =>
+              v.name.toLowerCase().includes(q) ||
+              v.description.toLowerCase().includes(q)
+          )
+        );
+      }
+      return true;
+    });
+  }, [dishGroups, selectedCategory, search]);
 
   const handleStartPriceEdit = (item: MenuItem) => {
     setEditingPriceId(item.id);
@@ -107,136 +161,202 @@ export function MenuManager() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F5EFEB]">
-              {filteredItems.map((item) => (
-                <tr key={item.id} className="hover:bg-[#FAF8F5]/80 transition-colors">
-                  {/* 1. Quick Stock Toggle Button (First Column) */}
-                  <td className="py-4 px-6">
-                    <button
-                      type="button"
-                      onClick={() => setPendingStockItem(item)}
-                      className={`inline-flex items-center gap-2.5 px-3 py-1.5 rounded-2xl font-bold text-xs border transition-all cursor-pointer shadow-2xs group ${
-                        item.isAvailable
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300"
-                          : "bg-rose-50 text-rose-800 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
-                      }`}
-                      title={
-                        item.isAvailable
-                          ? "Click to mark this item Out of Stock"
-                          : "Click to mark this item In Stock"
-                      }
-                    >
-                      <div
-                        className={`w-7 h-4 rounded-full p-0.5 transition-colors flex items-center shrink-0 ${
+              {filteredGroups.map((group) => {
+                const item = group.primaryItem;
+                const hasMultipleSizes = group.variants.length > 1;
+
+                return (
+                  <tr key={group.key} className="hover:bg-[#FAF8F5]/80 transition-colors">
+                    {/* 1. Quick Stock Toggle Button (First Column) */}
+                    <td className="py-4 px-6">
+                      <button
+                        type="button"
+                        onClick={() => setPendingStockItem(item)}
+                        className={`inline-flex items-center gap-2.5 px-3 py-1.5 rounded-2xl font-bold text-xs border transition-all cursor-pointer shadow-2xs group ${
                           item.isAvailable
-                            ? "bg-emerald-600 justify-end group-hover:bg-rose-600"
-                            : "bg-rose-600 justify-start group-hover:bg-emerald-600"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300"
+                            : "bg-rose-50 text-rose-800 border-rose-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
                         }`}
+                        title={
+                          item.isAvailable
+                            ? hasMultipleSizes
+                              ? "Click to mark this dish (both Small & Large) Out of Stock"
+                              : "Click to mark this dish Out of Stock"
+                            : hasMultipleSizes
+                            ? "Click to mark this dish (both Small & Large) In Stock"
+                            : "Click to mark this dish In Stock"
+                        }
                       >
-                        <div className="w-3 h-3 rounded-full bg-white shadow-xs" />
-                      </div>
-                      <span className="whitespace-nowrap">
-                        {item.isAvailable ? "In Stock" : "Out of Stock"}
-                      </span>
-                    </button>
-                  </td>
-
-                  {/* Dish Title & Image */}
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-12 h-12 rounded-xl object-cover border border-[#E7E0D8] shrink-0"
-                      />
-                      <div className="min-w-0 max-w-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="font-serif font-bold text-[#1C1917] text-sm truncate">
-                            {item.name}
-                          </span>
-                          {item.tag && (
-                            <span className="px-2 py-0.5 rounded-full bg-[#FED7AA]/60 text-[#9A3412] text-[9px] font-bold uppercase shrink-0">
-                              {item.tag}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[#78716C] text-[11px] truncate mt-0.5">
-                          {item.description}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Category */}
-                  <td className="py-4 px-6 font-medium text-[#1C1917]">
-                    <span className="px-2.5 py-1 rounded-full bg-[#F5EFEB] border border-[#E7E0D8] text-[11px]">
-                      {item.category}
-                    </span>
-                  </td>
-
-                  {/* Dietary */}
-                  <td className="py-4 px-6">
-                    {item.dietary === "veg" ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-semibold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                        Veg
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-200 text-[10px] font-semibold">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
-                        Non-Veg
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Quick Price Edit Field */}
-                  <td className="py-4 px-6">
-                    {editingPriceId === item.id ? (
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[#78716C]">₹</span>
-                        <input
-                          type="number"
-                          value={tempPrice}
-                          onChange={(e) => setTempPrice(Number(e.target.value))}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSavePrice(item.id);
-                            if (e.key === "Escape") setEditingPriceId(null);
-                          }}
-                          className="w-20 px-2 py-1 rounded-lg border border-[#C2410C] bg-white font-bold text-xs focus:outline-hidden"
-                          autoFocus
-                        />
-                        <button
-                          onClick={() => handleSavePrice(item.id)}
-                          className="p-1 rounded-lg bg-[#C2410C] text-white hover:bg-[#9A3412]"
-                          title="Save price"
+                        <div
+                          className={`w-7 h-4 rounded-full p-0.5 transition-colors flex items-center shrink-0 ${
+                            item.isAvailable
+                              ? "bg-emerald-600 justify-end group-hover:bg-rose-600"
+                              : "bg-rose-600 justify-start group-hover:bg-emerald-600"
+                          }`}
                         >
-                          <Check className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div
-                        onClick={() => handleStartPriceEdit(item)}
-                        className="group inline-flex items-center gap-1.5 cursor-pointer py-1 px-2 rounded-lg hover:bg-orange-50 border border-transparent hover:border-orange-200 transition-colors"
-                        title="Click to quickly edit price"
-                      >
-                        <span className="font-serif text-sm font-bold text-[#1C1917]">
-                          ₹{item.price}
+                          <div className="w-3 h-3 rounded-full bg-white shadow-xs" />
+                        </div>
+                        <span className="whitespace-nowrap">
+                          {item.isAvailable ? "In Stock" : "Out of Stock"}
                         </span>
-                        <Edit2 className="w-3 h-3 text-[#A8A29E] group-hover:text-[#C2410C]" />
-                      </div>
-                    )}
-                  </td>
+                      </button>
+                    </td>
 
-                  {/* Edit Details Action */}
-                  <td className="py-4 px-6 text-right">
-                    <button
-                      onClick={() => setEditingItem(item)}
-                      className="px-3 py-1.5 rounded-xl border border-[#E7E0D8] bg-[#FAF8F5] text-[#1C1917] hover:border-[#C2410C] hover:text-[#C2410C] font-semibold text-xs transition-colors cursor-pointer"
-                    >
-                      Edit Details
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    {/* Dish Title & Image */}
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={item.image}
+                          alt={group.baseName}
+                          className="w-12 h-12 rounded-xl object-cover border border-[#E7E0D8] shrink-0"
+                        />
+                        <div className="min-w-0 max-w-xs">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-serif font-bold text-[#1C1917] text-sm truncate">
+                              {group.baseName}
+                            </span>
+                            {hasMultipleSizes && (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-bold uppercase tracking-wider shrink-0">
+                                Small & Large
+                              </span>
+                            )}
+                            {item.tag && (
+                              <span className="px-2 py-0.5 rounded-full bg-[#FED7AA]/60 text-[#9A3412] text-[9px] font-bold uppercase shrink-0">
+                                {item.tag}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[#78716C] text-[11px] truncate mt-0.5">
+                            {getCleanDescription(item.description)}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Category */}
+                    <td className="py-4 px-6 font-medium text-[#1C1917]">
+                      <span className="px-2.5 py-1 rounded-full bg-[#F5EFEB] border border-[#E7E0D8] text-[11px]">
+                        {item.category}
+                      </span>
+                    </td>
+
+                    {/* Dietary */}
+                    <td className="py-4 px-6">
+                      {item.dietary === "veg" ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                          Veg
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-200 text-[10px] font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                          Non-Veg
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Price Column: Handles both single and multi-size (Small & Large) */}
+                    <td className="py-4 px-6">
+                      {hasMultipleSizes ? (
+                        <div className="flex flex-col gap-1.5 py-0.5">
+                          {group.variants.map((v) => {
+                            const isSmall = v.name.toLowerCase().includes("small");
+                            const isLarge = v.name.toLowerCase().includes("large");
+                            const label = isSmall ? "Small" : isLarge ? "Large" : "Portion";
+
+                            return (
+                              <div key={v.id} className="flex items-center gap-2">
+                                <span className="text-[11px] font-semibold text-[#78716C] w-10">
+                                  {label}:
+                                </span>
+                                {editingPriceId === v.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[#78716C]">₹</span>
+                                    <input
+                                      type="number"
+                                      value={tempPrice}
+                                      onChange={(e) => setTempPrice(Number(e.target.value))}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleSavePrice(v.id);
+                                        if (e.key === "Escape") setEditingPriceId(null);
+                                      }}
+                                      className="w-16 px-1.5 py-0.5 rounded-md border border-[#C2410C] bg-white font-bold text-xs focus:outline-hidden"
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() => handleSavePrice(v.id)}
+                                      className="p-1 rounded-md bg-[#C2410C] text-white hover:bg-[#9A3412]"
+                                      title="Save price"
+                                    >
+                                      <Check className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div
+                                    onClick={() => handleStartPriceEdit(v)}
+                                    className="group inline-flex items-center gap-1 cursor-pointer py-0.5 px-1.5 rounded-md hover:bg-orange-50 border border-transparent hover:border-orange-200 transition-colors"
+                                    title={`Click to edit ${label} price`}
+                                  >
+                                    <span className="font-serif text-xs font-bold text-[#1C1917]">
+                                      ₹{v.price}
+                                    </span>
+                                    <Edit2 className="w-2.5 h-2.5 text-[#A8A29E] group-hover:text-[#C2410C]" />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        editingPriceId === item.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[#78716C]">₹</span>
+                            <input
+                              type="number"
+                              value={tempPrice}
+                              onChange={(e) => setTempPrice(Number(e.target.value))}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSavePrice(item.id);
+                                if (e.key === "Escape") setEditingPriceId(null);
+                              }}
+                              className="w-20 px-2 py-1 rounded-lg border border-[#C2410C] bg-white font-bold text-xs focus:outline-hidden"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleSavePrice(item.id)}
+                              className="p-1 rounded-lg bg-[#C2410C] text-white hover:bg-[#9A3412]"
+                              title="Save price"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            onClick={() => handleStartPriceEdit(item)}
+                            className="group inline-flex items-center gap-1.5 cursor-pointer py-1 px-2 rounded-lg hover:bg-orange-50 border border-transparent hover:border-orange-200 transition-colors"
+                            title="Click to quickly edit price"
+                          >
+                            <span className="font-serif text-sm font-bold text-[#1C1917]">
+                              ₹{item.price}
+                            </span>
+                            <Edit2 className="w-3 h-3 text-[#A8A29E] group-hover:text-[#C2410C]" />
+                          </div>
+                        )
+                      )}
+                    </td>
+
+                    {/* Edit Details Action */}
+                    <td className="py-4 px-6 text-right">
+                      <button
+                        onClick={() => setEditingItem(item)}
+                        className="px-3 py-1.5 rounded-xl border border-[#E7E0D8] bg-[#FAF8F5] text-[#1C1917] hover:border-[#C2410C] hover:text-[#C2410C] font-semibold text-xs transition-colors cursor-pointer"
+                      >
+                        Edit Details
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

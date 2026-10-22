@@ -665,17 +665,6 @@ export const INITIAL_ORDERS: Order[] = [];
 
 export const DEFAULT_DELIVERY_CHARGE = 35;
 export const DEFAULT_PACKAGING_CHARGE = 7;
+export const DEFAULT_FREE_DELIVERY_THRESHOLD = 199;
 
-export const INITIAL_COUPONS: Coupon[] = [
-  {
-    id: "cp-default",
-    code: "FREE199",
-    title: "Free Delivery Above ₹199",
-    description: "Enjoy 100% free delivery on all orders above ₹199",
-    discountType: "free_delivery",
-    discountValue: 0,
-    minOrderAmount: 199,
-    isActive: true,
-    isDefault: true,
-  },
-];
+export const INITIAL_COUPONS: Coupon[] = [];

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { MenuItem, CartItem, Order, OrderStatus, Rider, UserProfile, OrderAddress, WhatsAppStatus, Category, SavedLocation, Coupon } from "@/types";
-import { INITIAL_MENU_ITEMS, INITIAL_ORDERS, RIDERS, INITIAL_COUPONS, DEFAULT_DELIVERY_CHARGE } from "@/data/mockData";
+import { INITIAL_MENU_ITEMS, INITIAL_ORDERS, RIDERS, INITIAL_COUPONS, DEFAULT_DELIVERY_CHARGE, DEFAULT_FREE_DELIVERY_THRESHOLD } from "@/data/mockData";
 import { orderService, menuService, couponService, settingsService } from "@backend";
 import { sendBrowserNotification } from "@/lib/pushNotifications";
 
@@ -41,6 +41,8 @@ interface KitchenContextType {
   // Delivery Fee & Coupons
   baseDeliveryCharge: number;
   updateBaseDeliveryCharge: (charge: number) => void;
+  freeDeliveryThreshold: number;
+  updateFreeDeliveryThreshold: (threshold: number) => void;
   coupons: Coupon[];
   addCoupon: (coupon: Omit<Coupon, "id">) => void;
   removeCoupon: (couponId: string) => void;
@@ -254,14 +256,13 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem("lebistro_orders");
       } catch {}
 
-      // Purge any stale legacy coupons cache so LOFFEL50 / FEAST20 never persist
+      // Load any saved coupons cache
       try {
         const storedCoupons = localStorage.getItem("lebistro_coupons");
         if (storedCoupons) {
           const parsed = JSON.parse(storedCoupons);
-          if (Array.isArray(parsed) && parsed.some((c: any) => c.code !== "FREE199")) {
-            localStorage.setItem("lebistro_coupons", JSON.stringify(INITIAL_COUPONS));
-            setCoupons(INITIAL_COUPONS);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setCoupons(parsed);
           }
         }
       } catch {}
@@ -304,27 +305,29 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         setMenuItems(remoteMenu);
       }
 
-      // Coupons - strictly enforce only FREE199 / free_delivery
+      // Coupons - fetch all promotional and default coupons
       const { coupons: remoteCoupons } = await couponService.fetchCoupons();
       if (isMounted) {
-        const filtered = (remoteCoupons || []).filter(
-          (c) => c.code.toUpperCase() === "FREE199" || c.discountType === "free_delivery"
-        );
-        const finalCoupons = filtered.length > 0 ? filtered : INITIAL_COUPONS;
-        setCoupons(finalCoupons);
-        try {
-          localStorage.setItem("lebistro_coupons", JSON.stringify(finalCoupons));
-        } catch {}
+        if (remoteCoupons && remoteCoupons.length > 0) {
+          setCoupons(remoteCoupons);
+          try {
+            localStorage.setItem("lebistro_coupons", JSON.stringify(remoteCoupons));
+          } catch {}
+        } else {
+          setCoupons(INITIAL_COUPONS);
+        }
       }
 
       // Settings
       const {
         baseDeliveryCharge: remoteFee,
+        freeDeliveryThreshold: remoteThreshold,
         isStoreOpen: remoteStoreState,
         deliveryRiders: remoteRiders,
       } = await settingsService.fetchSettings();
       if (isMounted) {
         if (remoteFee !== undefined) setBaseDeliveryCharge(remoteFee);
+        if (remoteThreshold !== undefined) setFreeDeliveryThreshold(remoteThreshold);
         if (remoteStoreState !== undefined) setIsStoreOpen(remoteStoreState);
         if (remoteRiders !== undefined) {
           setRiders(remoteRiders);
@@ -413,14 +416,10 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     const unsubCoupons = couponService.subscribeToCoupons({
       onChange: async () => {
         const { coupons: latest } = await couponService.fetchCoupons();
-        if (isMounted) {
-          const filtered = (latest || []).filter(
-            (c) => c.code.toUpperCase() === "FREE199" || c.discountType === "free_delivery"
-          );
-          const finalCoupons = filtered.length > 0 ? filtered : INITIAL_COUPONS;
-          setCoupons(finalCoupons);
+        if (isMounted && latest && latest.length > 0) {
+          setCoupons(latest);
           try {
-            localStorage.setItem("lebistro_coupons", JSON.stringify(finalCoupons));
+            localStorage.setItem("lebistro_coupons", JSON.stringify(latest));
           } catch {}
         }
       },
@@ -430,11 +429,13 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       onChange: async () => {
         const {
           baseDeliveryCharge: fee,
+          freeDeliveryThreshold: threshold,
           isStoreOpen: open,
           deliveryRiders: remoteRiders,
         } = await settingsService.fetchSettings();
         if (isMounted) {
           if (fee !== undefined) setBaseDeliveryCharge(fee);
+          if (threshold !== undefined) setFreeDeliveryThreshold(threshold);
           if (open !== undefined) setIsStoreOpen(open);
           if (remoteRiders !== undefined) {
             setRiders(remoteRiders);
@@ -609,21 +610,35 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     showToast(`Base delivery charge updated to ₹${val}`, "success");
   };
 
-  // Coupons Management - Only Free Delivery Above 199 kept
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("lebistro_free_delivery_threshold");
+        if (stored) return Number(stored) || DEFAULT_FREE_DELIVERY_THRESHOLD;
+      } catch {}
+    }
+    return DEFAULT_FREE_DELIVERY_THRESHOLD;
+  });
+
+  const updateFreeDeliveryThreshold = (threshold: number) => {
+    const val = Math.max(0, Math.round(threshold));
+    setFreeDeliveryThreshold(val);
+    try {
+      localStorage.setItem("lebistro_free_delivery_threshold", String(val));
+    } catch {}
+    settingsService.updateFreeDeliveryThreshold(val);
+    showToast(`Free delivery threshold updated to ₹${val}`, "success");
+  };
+
+  // Coupons Management
   const [coupons, setCoupons] = useState<Coupon[]>(() => {
     if (typeof window !== "undefined") {
       try {
         const saved = localStorage.getItem("lebistro_coupons");
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed)) {
-            const filtered = parsed.filter(
-              (c: Coupon) => c.code.toUpperCase() === "FREE199" || c.discountType === "free_delivery"
-            );
-            if (filtered.length > 0) {
-              localStorage.setItem("lebistro_coupons", JSON.stringify(filtered));
-              return filtered;
-            }
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
           }
         }
       } catch {}
@@ -735,13 +750,12 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   const tax = 0;
 
   // Delivery fee calculation
-  // Free delivery applies for orders of ₹199 or above (or when free delivery coupon applied).
-  // Standard delivery charges apply for orders below ₹199.
+  // Free delivery applies automatically for orders at or above freeDeliveryThreshold (configurable by admin).
   const deliveryFee = useMemo(() => {
     if (cartSubtotal === 0 || deliveryType === "Pickup") return 0;
 
     if (
-      cartSubtotal >= 199 ||
+      cartSubtotal >= freeDeliveryThreshold ||
       (appliedCoupon &&
         appliedCoupon.discountType === "free_delivery" &&
         cartSubtotal >= appliedCoupon.minOrderAmount)
@@ -750,7 +764,7 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
     }
 
     return baseDeliveryCharge;
-  }, [cartSubtotal, deliveryType, appliedCoupon, baseDeliveryCharge]);
+  }, [cartSubtotal, deliveryType, freeDeliveryThreshold, appliedCoupon, baseDeliveryCharge]);
 
   const grandTotal =
     cartSubtotal > 0
@@ -1056,18 +1070,33 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   // Menu items manager
   const toggleAvailability = (itemId: string) => {
     setMenuItems((prev) => {
-      const updated = prev.map((item) => {
-        if (item.id === itemId) {
-          const updatedState = !item.isAvailable;
-          menuService.toggleAvailability(itemId, updatedState);
-          showToast(
-            `${item.name} is now ${updatedState ? "In Stock" : "Out of Stock"}`,
-            updatedState ? "success" : "warning"
-          );
-          return { ...item, isAvailable: updatedState };
-        }
-        return item;
+      const target = prev.find((item) => item.id === itemId);
+      if (!target) return prev;
+
+      const baseName = target.name.replace(/\s*\((Small|Large)\)/i, "").trim();
+      const updatedState = !target.isAvailable;
+
+      // Find all matching items (both small and large)
+      const matchingItems = prev.filter((item) => {
+        const itemBase = item.name.replace(/\s*\((Small|Large)\)/i, "").trim();
+        return item.id === itemId || (itemBase === baseName && item.category === target.category);
       });
+
+      // Update in Supabase backend for all variants
+      matchingItems.forEach((mItem) => {
+        menuService.toggleAvailability(mItem.id, updatedState);
+      });
+
+      showToast(
+        `${baseName} is now ${updatedState ? "In Stock" : "Out of Stock"}`,
+        updatedState ? "success" : "warning"
+      );
+
+      const matchingIds = matchingItems.map((m) => m.id);
+      const updated = prev.map((item) =>
+        matchingIds.includes(item.id) ? { ...item, isAvailable: updatedState } : item
+      );
+
       try {
         localStorage.setItem("lebistro_menu", JSON.stringify(updated));
       } catch {}
@@ -1084,11 +1113,53 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateItemDetails = (updatedItem: MenuItem) => {
-    setMenuItems((prev) =>
-      prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
-    );
-    menuService.updateItemDetails(updatedItem);
-    showToast(`Dish details updated for ${updatedItem.name}`, "success");
+    setMenuItems((prev) => {
+      const target = prev.find((item) => item.id === updatedItem.id);
+      if (!target) return prev;
+
+      const baseName = target.name.replace(/\s*\((Small|Large)\)/i, "").trim();
+      const isMultiSize = Boolean(target.name.match(/\((Small|Large)\)/i));
+
+      if (isMultiSize) {
+        const cleanUpdatedName = updatedItem.name.replace(/\s*\((Small|Large)\)/i, "").trim();
+        const updated = prev.map((item) => {
+          const itemBase = item.name.replace(/\s*\((Small|Large)\)/i, "").trim();
+          if (itemBase === baseName && item.category === target.category) {
+            const sizeSuffixMatch = item.name.match(/\((Small|Large)\)/i);
+            const sizeSuffix = sizeSuffixMatch ? ` (${sizeSuffixMatch[1]})` : "";
+            const syncedItem: MenuItem = {
+              ...item,
+              name: `${cleanUpdatedName}${sizeSuffix}`,
+              category: updatedItem.category,
+              description: updatedItem.description,
+              dietary: updatedItem.dietary,
+              tag: updatedItem.tag,
+              image: updatedItem.image,
+              preparationTime: updatedItem.preparationTime,
+              price: item.id === updatedItem.id ? updatedItem.price : item.price,
+            };
+            menuService.updateItemDetails(syncedItem);
+            return syncedItem;
+          }
+          return item;
+        });
+
+        try {
+          localStorage.setItem("lebistro_menu", JSON.stringify(updated));
+        } catch {}
+
+        showToast(`Dish details updated for ${cleanUpdatedName}`, "success");
+        return updated;
+      }
+
+      menuService.updateItemDetails(updatedItem);
+      showToast(`Dish details updated for ${updatedItem.name}`, "success");
+      const updated = prev.map((item) => (item.id === updatedItem.id ? updatedItem : item));
+      try {
+        localStorage.setItem("lebistro_menu", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
   };
 
   // User-specific saved locations management
@@ -1355,6 +1426,8 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
         grandTotal,
         baseDeliveryCharge,
         updateBaseDeliveryCharge,
+        freeDeliveryThreshold,
+        updateFreeDeliveryThreshold,
         coupons,
         addCoupon,
         removeCoupon,
