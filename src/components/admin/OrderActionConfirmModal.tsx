@@ -4,6 +4,7 @@ import React from "react";
 import { X, CheckCircle2, Bike, AlertCircle, ShoppingBag } from "lucide-react";
 import { Order } from "@/types";
 import { getGoogleMapsDirectionsUrl } from "@/lib/googleMaps";
+import { formatOrderElapsedTime } from "@/components/admin/adminTimeUtils";
 
 function WhatsAppIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
@@ -116,7 +117,7 @@ export function OrderActionConfirmModal({
           </div>
           <div className="flex items-center justify-between text-[11px] text-[#A8A29E]">
             <span>Type: {order.orderType} • {order.items.length} item(s)</span>
-            <span>{order.createdAt}</span>
+            <span>{formatOrderElapsedTime(order)}</span>
           </div>
           {action === "assign" && riderName && (
             <div className="pt-1 border-t border-white/10 text-[11px] text-orange-300 font-medium flex items-center gap-1.5">

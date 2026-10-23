@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useKitchen } from "@/context/KitchenContext";
 import { Order, OrderStatus } from "@/types";
+import { formatOrderElapsedTime } from "./adminTimeUtils";
 import {
   MapPin,
   Bike,
@@ -107,6 +108,16 @@ export function LiveOrdersBoard() {
   const [whatsAppPreviewOrder, setWhatsAppPreviewOrder] = useState<Order | null>(null);
   const [rejectingOrderId, setRejectingOrderId] = useState<string | null>(null);
   const [rejectionComment, setRejectionComment] = useState("out of stock");
+
+  // Real-time ticker to continuously update order card elapsed timings (e.g. 10min, 11min, etc.)
+  const [now, setNow] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 10000); // Check every 10 seconds for real-time accuracy
+    return () => clearInterval(timer);
+  }, []);
 
   // Step-by-Step Action Confirmation Modal state (Accept, Assign Driver, Mark Delivered)
   const [confirmActionModal, setConfirmActionModal] = useState<{
@@ -448,9 +459,12 @@ export function LiveOrdersBoard() {
                   <Bike className="w-4 h-4 text-[#C2410C]" />
                 </div>
               )}
-              <span className="text-[11px] font-medium text-[#78716C] flex items-center gap-1">
+              <span
+                className="text-[11px] font-medium text-[#78716C] flex items-center gap-1"
+                title={order.createdAt && order.createdAt !== "Just now" ? `Order placed: ${order.createdAt}` : `Order received ${formatOrderElapsedTime(order, now)}`}
+              >
                 <Clock className="w-3 h-3 text-[#A8A29E]" />
-                {order.createdAt}
+                {formatOrderElapsedTime(order, now)}
               </span>
             </div>
           </div>

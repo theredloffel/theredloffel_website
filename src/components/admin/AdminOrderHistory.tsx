@@ -360,7 +360,9 @@ export function AdminOrderHistory() {
                             </span>
                             <span className="text-xs text-[#78716C] flex items-center gap-1">
                               <Clock className="w-3 h-3 text-[#A8A29E]" />
-                              {order.createdAt}
+                              {order.createdAt === "Just now" && order.createdTimestamp
+                                ? new Date(order.createdTimestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                                : order.createdAt}
                             </span>
                             {getStatusBadge(order.status, order.rejectionReason)}
                           </div>

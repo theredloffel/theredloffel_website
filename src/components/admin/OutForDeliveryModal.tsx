@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useKitchen } from "@/context/KitchenContext";
 import { Order } from "@/types";
+import { formatOrderElapsedTime } from "@/components/admin/adminTimeUtils";
 import { OrderActionConfirmModal } from "@/components/admin/OrderActionConfirmModal";
 import { AddDriverModal } from "@/components/admin/AddDriverModal";
 import {
@@ -41,7 +42,17 @@ export function OutForDeliveryModal({ isOpen, onClose, initialTab = "orders" }: 
   const [confirmingOrder, setConfirmingOrder] = useState<Order | null>(null);
   const [isAddDriverOpen, setIsAddDriverOpen] = useState(false);
 
-  React.useEffect(() => {
+  const [now, setNow] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [isOpen]);
+
+  useEffect(() => {
     if (isOpen && initialTab) {
       setActiveTab(initialTab);
     }
@@ -254,9 +265,12 @@ export function OutForDeliveryModal({ isOpen, onClose, initialTab = "orders" }: 
                       <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-300 border border-orange-500/30">
                         In the Road
                       </span>
-                      <span className="text-xs text-[#A8A29E] flex items-center gap-1">
+                      <span
+                        className="text-xs text-[#A8A29E] flex items-center gap-1"
+                        title={order.createdAt && order.createdAt !== "Just now" ? `Order placed: ${order.createdAt}` : `Order received ${formatOrderElapsedTime(order, now)}`}
+                      >
                         <Clock className="w-3 h-3 text-[#A8A29E]" />
-                        {order.createdAt}
+                        {formatOrderElapsedTime(order, now)}
                       </span>
                     </div>
 
