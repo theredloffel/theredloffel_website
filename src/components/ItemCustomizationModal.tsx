@@ -47,22 +47,8 @@ export function ItemCustomizationModal({
       return customSizeOptions;
     }
 
-    const lowerName = item.name.toLowerCase();
-    if (lowerName.includes("white sauce pasta")) {
-      return [
-        { id: "small", name: "Small", price: 120 },
-        { id: "large", name: "Large", price: 175 },
-      ];
-    }
-    if (item.category === "Pasta") {
-      return [
-        { id: "small", name: "Small", price: item.price },
-        { id: "large", name: "Large", price: item.price + 55 },
-      ];
-    }
     return [
-      { id: "small", name: "Small", price: item.price },
-      { id: "large", name: "Large", price: item.price + 40 },
+      { id: "regular", name: "Regular", price: item.price },
     ];
   }, [item, customSizeOptions]);
 

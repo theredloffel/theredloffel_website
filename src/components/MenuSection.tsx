@@ -98,9 +98,7 @@ export function MenuSection() {
   const hasSmallAndLarge = (itm: MenuItem) => {
     const base = getBaseDishName(itm.name);
     const variants = dishVariantsMap[base];
-    if (variants && variants.length > 1) return true;
-    if (itm.category === "Pasta" || itm.name.toLowerCase().includes("pasta")) return true;
-    return false;
+    return Boolean(variants && variants.length > 1);
   };
 
   const getSizeOptionsForItem = (item: MenuItem): CustomSizeOption[] => {
@@ -118,22 +116,8 @@ export function MenuSection() {
       });
     }
 
-    const lower = item.name.toLowerCase();
-    if (lower.includes("white sauce pasta")) {
-      return [
-        { id: `${item.id}-small`, name: "Small", price: item.price, item }, // item.price is 120 matching the menu!
-        { id: `${item.id}-large`, name: "Large", price: 175, item: { ...item, id: `${item.id}-large`, price: 175 } },
-      ];
-    }
-    if (item.category === "Pasta") {
-      return [
-        { id: `${item.id}-small`, name: "Small", price: item.price, item },
-        { id: `${item.id}-large`, name: "Large", price: item.price + 55, item: { ...item, id: `${item.id}-large`, price: item.price + 55 } },
-      ];
-    }
     return [
-      { id: `${item.id}-small`, name: "Small", price: item.price, item },
-      { id: `${item.id}-large`, name: "Large", price: item.price + 40, item: { ...item, id: `${item.id}-large`, price: item.price + 40 } },
+      { id: item.id, name: "Regular", price: item.price, item },
     ];
   };
 
