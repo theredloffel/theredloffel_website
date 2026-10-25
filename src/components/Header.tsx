@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useKitchen } from "@/context/KitchenContext";
 import {
   Clock,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 
 export function Header() {
+  const router = useRouter();
   const {
     setIsAuthOpen,
     setIsOrderHistoryOpen,
@@ -122,36 +124,29 @@ export function Header() {
               {/* Vertical Divider */}
               <div className="h-6 w-[1px] bg-[#E7E0D8] mx-2 shrink-0" />
 
-              {/* Search Sub-element */}
-              <div className="flex-1 flex items-center gap-2 px-1 min-w-0">
+              {/* Search Sub-element (Navigates to /search) */}
+              <div
+                onClick={() => router.push("/search")}
+                className="flex-1 flex items-center gap-2 px-1 min-w-0 cursor-pointer"
+              >
                 <Search className="w-4 h-4 text-[#A8A29E] shrink-0" />
                 <input
                   type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  readOnly
                   placeholder='Search "burgers, pasta, maggi, shakes..."'
-                  className="w-full bg-transparent text-xs text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-hidden"
+                  className="w-full bg-transparent text-xs text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-hidden cursor-pointer"
                 />
-                {searchQuery ? (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery("")}
-                    className="p-1 text-[#78716C] hover:text-[#1C1917] shrink-0"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleMicClick}
-                    className={`p-1 rounded-full shrink-0 transition-colors ${
-                      isMicListening ? "text-[#C2410C] animate-pulse" : "text-[#A8A29E] hover:text-[#C2410C]"
-                    }`}
-                    title="Voice Search"
-                  >
-                    <Mic className="w-4 h-4" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push("/search");
+                  }}
+                  className="p-1 rounded-full shrink-0 transition-colors text-[#A8A29E] hover:text-[#C2410C] cursor-pointer"
+                  title="Voice Search"
+                >
+                  <Mic className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
@@ -311,38 +306,31 @@ export function Header() {
           } transition-all`}
         >
           <div className="flex items-center gap-2">
-            {/* Search Input Box */}
-            <div className="relative flex-1 bg-white rounded-2xl border border-[#E7E0D8] shadow-xs flex items-center px-3 py-2 focus-within:border-[#C2410C] focus-within:ring-2 focus-within:ring-[#C2410C]/20 transition-all">
+            {/* Mobile Search Input Box (Navigates to /search) */}
+            <div
+              onClick={() => router.push("/search")}
+              className="relative flex-1 bg-white rounded-2xl border border-[#E7E0D8] shadow-xs flex items-center px-3 py-2 cursor-pointer transition-all"
+            >
               <Search className="w-4 h-4 text-[#78716C] shrink-0 mr-2" />
               <input
                 type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                readOnly
                 placeholder='Search "burgers, pasta, maggi, shakes..."'
-                className="w-full bg-transparent text-xs text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-hidden"
+                className="w-full bg-transparent text-xs text-[#1C1917] placeholder:text-[#A8A29E] focus:outline-hidden cursor-pointer"
               />
-              {searchQuery ? (
+              <div className="flex items-center gap-1.5 pl-2 border-l border-[#E7E0D8]">
                 <button
                   type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="p-1 text-[#78716C] hover:text-[#1C1917]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push("/search");
+                  }}
+                  className="p-1 rounded-full transition-colors text-[#78716C] hover:text-[#C2410C] cursor-pointer"
+                  title="Voice Search"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <Mic className="w-4 h-4" />
                 </button>
-              ) : (
-                <div className="flex items-center gap-1.5 pl-2 border-l border-[#E7E0D8]">
-                  <button
-                    type="button"
-                    onClick={handleMicClick}
-                    className={`p-1 rounded-full transition-colors ${
-                      isMicListening ? "text-[#C2410C] animate-pulse" : "text-[#78716C] hover:text-[#C2410C]"
-                    }`}
-                    title="Voice Search"
-                  >
-                    <Mic className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
+              </div>
             </div>
 
             {/* VEG Switch Toggle */}
