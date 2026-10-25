@@ -5,6 +5,7 @@ import { useKitchen } from "@/context/KitchenContext";
 import { Category, MenuItem } from "@/types";
 import { Plus, Minus, AlertCircle, Flame, Star, Check } from "lucide-react";
 import { ItemCustomizationModal, CustomSizeOption } from "./ItemCustomizationModal";
+import { FoodCard } from "./FoodCard";
 
 const MENU_CATEGORIES: Category[] = [
   "All",
@@ -158,176 +159,15 @@ export function MenuSection() {
     }
   };
 
-  // Render individual 2-column food card (matching reference screenshot)
-  const renderFoodCard = (item: MenuItem) => {
-    const quantity = getItemQuantityInCart(item);
-    const hasSizes = hasSmallAndLarge(item);
-    const cleanTitle = getBaseDishName(item.name);
-    const cleanDesc = item.description.replace(/\s*\(Portion:\s*(Small|Large)\)/i, "");
-
-    return (
-      <div
-        key={item.id}
-        onClick={() => {
-          if (hasSizes && item.isAvailable) {
-            setCustomizingItem(item);
-          }
-        }}
-        className={`group relative flex flex-col bg-white rounded-2xl sm:rounded-3xl border border-[#E7E0D8] overflow-hidden shadow-2xs hover:shadow-lg hover:border-[#C2410C]/40 transition-all duration-300 ${
-          hasSizes && item.isAvailable ? "cursor-pointer" : ""
-        }`}
-      >
-        {/* Top: Food Image */}
-        <div className="relative h-36 sm:h-44 md:h-48 w-full overflow-hidden bg-[#F5EFEB]">
-          <img
-            src={item.image}
-            alt={cleanTitle}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
-
-          {/* Top Badges overlay */}
-          <div className="absolute top-2 left-2 flex flex-wrap gap-1">
-            {item.tag && (
-              <span className="px-2 py-0.5 rounded-md bg-[#1C1917]/85 backdrop-blur-xs text-[#FAF8F5] text-[9px] font-bold uppercase tracking-wider shadow-xs">
-                {item.tag}
-              </span>
-            )}
-            {item.price <= 99 && (
-              <span className="px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[9px] font-bold tracking-tight shadow-xs">
-                Under ₹99
-              </span>
-            )}
-          </div>
-
-          {/* Transparent Out of Stock Banner in the bottom of food image */}
-          {!item.isAvailable && (
-            <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-xs py-1.5 px-3 flex items-center justify-center gap-1.5 border-t border-white/10 text-white shadow-xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse shrink-0" />
-              <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-widest text-[#FAF8F5]">
-                Out of Stock
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Middle: Info Strip (Serves 1, ADD Button) */}
-        <div className="px-3 pt-2 pb-1.5 flex items-center justify-between border-b border-[#F5EFEB] bg-[#FAF8F5]/60 text-[#78716C] text-[10px]">
-          <div className="flex items-center gap-1.5">
-            {/* Green Veg Dot Indicator */}
-            <div className="w-3.5 h-3.5 rounded-xs border border-emerald-600 flex items-center justify-center bg-white shrink-0">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-600"></div>
-            </div>
-            <span className="font-medium text-[#1C1917]">Serves 1</span>
-          </div>
-
-          {/* ADD Button: Shows customisable only when item has Small/Large options */}
-          <div className="shrink-0 flex flex-col items-center">
-            {!item.isAvailable ? (
-              <button
-                type="button"
-                disabled
-                className="px-3.5 py-1 rounded-xl bg-[#F5EFEB] border border-[#E7E0D8] text-[#A8A29E] cursor-not-allowed text-xs font-bold shadow-none opacity-60 tracking-wider select-none"
-                title="This item is currently out of stock"
-              >
-                ADD
-              </button>
-            ) : quantity === 0 ? (
-              <div className="flex flex-col items-center">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (hasSizes) {
-                      // Ask first to select Small or Large!
-                      setCustomizingItem(item);
-                    } else {
-                      addToCart(item);
-                    }
-                  }}
-                  className="px-3.5 py-1 rounded-xl bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all text-xs font-black shadow-xs tracking-wider"
-                >
-                  ADD
-                </button>
-                {hasSizes && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCustomizingItem(item);
-                    }}
-                    className="text-[9px] text-[#78716C] hover:text-[#C2410C] font-semibold text-center block mt-0.5 select-none leading-none cursor-pointer"
-                  >
-                    customisable
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center">
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  className="flex items-center rounded-xl bg-emerald-700 text-white shadow-xs p-0.5 text-xs font-bold"
-                >
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveFromCart(item)}
-                    className="w-5 h-5 flex items-center justify-center hover:bg-black/20 rounded-md active:scale-90"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <span className="w-5 text-center text-xs">{quantity}</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (hasSizes) {
-                        setCustomizingItem(item);
-                      } else {
-                        addToCart(item);
-                      }
-                    }}
-                    className="w-5 h-5 flex items-center justify-center hover:bg-black/20 rounded-md active:scale-90"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
-                </div>
-                {hasSizes && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setCustomizingItem(item);
-                    }}
-                    className="text-[9px] text-[#78716C] hover:text-[#C2410C] font-semibold text-center block mt-0.5 select-none leading-none cursor-pointer"
-                  >
-                    customisable
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom: Pricing & Title */}
-        <div className="p-3 flex-1 flex flex-col justify-between">
-          <div>
-            <div className="flex items-baseline gap-1">
-              <span className="text-base sm:text-lg font-black text-[#1C1917]">
-                ₹{item.price}
-              </span>
-            </div>
-
-            <h3 className="font-bold text-xs sm:text-sm text-[#1C1917] line-clamp-1 group-hover:text-[#C2410C] transition-colors mt-0.5">
-              {cleanTitle}
-            </h3>
-
-            <p className="text-[11px] text-[#78716C] line-clamp-2 mt-1 leading-snug">
-              {cleanDesc}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  // Render individual 2-column food card
+  const renderFoodCard = (item: MenuItem) => (
+    <FoodCard
+      key={item.id}
+      item={item}
+      onCustomize={(itm) => setCustomizingItem(itm)}
+      dishVariantsMap={dishVariantsMap}
+    />
+  );
 
 
 
