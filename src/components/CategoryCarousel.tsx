@@ -20,6 +20,12 @@ const CATEGORIES_DATA: CategoryItem[] = [
     image: "/foodpic/Pasta_Menu_Photos/03_Mix_Sauce_Pasta.jpg",
   },
   {
+    id: "Newly Launched",
+    title: "Newly Launched",
+    subtitle: "Green Veg Momos",
+    image: "/foodpic/momos/greenmomos.png",
+  },
+  {
     id: "Under ₹99",
     title: "Under ₹99",
     subtitle: "Pocket Friendly",

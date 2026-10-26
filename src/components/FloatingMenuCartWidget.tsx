@@ -7,6 +7,7 @@ import { ChevronRight, X, Clock, Flame, ShoppingBag, CheckCircle2, Utensils, Che
 
 const CATEGORIES_CONFIG: { category: Category; label: string }[] = [
   { category: "All", label: "All Items" },
+  { category: "Newly Launched", label: "Newly Launched" },
   { category: "Under ₹99", label: "Under ₹99 Specials" },
   { category: "Burgers", label: "Burgers" },
   { category: "Parathas", label: "Parathas" },
@@ -149,9 +150,10 @@ export function FloatingMenuCartWidget() {
     );
 
     counts["All"] = availableItems.length;
+    counts["Newly Launched"] = availableItems.filter((i) => i.name.toLowerCase().includes("green veg momos")).length;
     counts["Under ₹99"] = availableItems.filter((i) => i.price <= 99).length;
 
-    CATEGORIES_CONFIG.slice(2).forEach(({ category }) => {
+    CATEGORIES_CONFIG.slice(3).forEach(({ category }) => {
       counts[category] = availableItems.filter((i) => i.category === category).length;
     });
 
@@ -165,6 +167,15 @@ export function FloatingMenuCartWidget() {
 
     const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
     const headerOffset = isDesktop ? 160 : 115;
+
+    if (cat === "Newly Launched") {
+      const el = document.getElementById("newly-launched-showcase");
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.pageYOffset - (isDesktop ? 150 : 105);
+        window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+        return;
+      }
+    }
 
     if (cat === "Under ₹99" || cat === "All") {
       const menuElem = document.getElementById("menu");
