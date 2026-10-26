@@ -305,6 +305,32 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     preparationTime: "12 mins",
     calories: "340 kcal",
   },
+  {
+    id: "c9-steam",
+    name: "Green Veg Momos (Steam)",
+    category: "Chinese",
+    price: 119,
+    description: "Delicious green momos filled with flavourful veggie stuffing, steamed to perfection and served with our signature spicy red chutney and creamy orange dip. A perfect bite of freshness, flavour, and comfort in every piece!",
+    dietary: "veg",
+    isAvailable: true,
+    image: "/foodpic/momos/greenmomos.png",
+    tag: "Chef's Special",
+    preparationTime: "12 mins",
+    calories: "220 kcal",
+  },
+  {
+    id: "c9-fried",
+    name: "Green Veg Momos (Fried)",
+    category: "Chinese",
+    price: 129,
+    description: "Delicious green momos filled with flavourful veggie stuffing, steamed to perfection and served with our signature spicy red chutney and creamy orange dip. A perfect bite of freshness, flavour, and comfort in every piece!",
+    dietary: "veg",
+    isAvailable: true,
+    image: "/foodpic/momos/greenmomos.png",
+    tag: "Bestseller",
+    preparationTime: "14 mins",
+    calories: "270 kcal",
+  },
 
   // 4. FRIED RICE
   {

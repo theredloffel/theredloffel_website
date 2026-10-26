@@ -25,10 +25,10 @@ interface DishGroup {
 }
 
 const getBaseDishName = (name: string) =>
-  name.replace(/\s*\((Small|Large)\)/i, "").trim();
+  name.replace(/\s*\([^)]+\)/i, "").trim();
 
 const getCleanDescription = (desc: string) =>
-  desc.replace(/\s*\(?(Small|Large) portion\)?/i, "").trim();
+  desc.replace(/\s*\(?(Small|Large|Steam|Fried) portion\)?/i, "").replace(/\s*\(Portion:\s*[^)]+\)/i, "").trim();
 
 export function MenuManager() {
   const {
@@ -45,7 +45,7 @@ export function MenuManager() {
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [tempPrice, setTempPrice] = useState<number>(0);
 
-  // Group all menu items first so multi-size variants (e.g. Chilli Paneer Small & Large) are unified into 1 dish
+  // Group all menu items first so multi-option/multi-size variants (e.g. Chilli Paneer Small & Large, Momos Steam & Fried) are unified into 1 dish
   const dishGroups = useMemo(() => {
     const groups: DishGroup[] = [];
     const map = new Map<string, DishGroup>();
@@ -66,10 +66,10 @@ export function MenuManager() {
       } else {
         const group = map.get(key)!;
         group.variants.push(item);
-        // Sort variants ascending by price (Small first, Large second)
+        // Sort variants ascending by price (lowest price first)
         group.variants.sort((a, b) => a.price - b.price);
-        // Keep the lower price / Small variant as representative primaryItem
-        if (item.name.toLowerCase().includes("(small)") || item.price < group.primaryItem.price) {
+        // Keep the lower price variant as representative primaryItem
+        if (item.price < group.primaryItem.price) {
           group.primaryItem = item;
         }
       }
@@ -180,10 +180,10 @@ export function MenuManager() {
                         title={
                           item.isAvailable
                             ? hasMultipleSizes
-                              ? "Click to mark this dish (both Small & Large) Out of Stock"
+                              ? "Click to mark this dish (all options) Out of Stock"
                               : "Click to mark this dish Out of Stock"
                             : hasMultipleSizes
-                            ? "Click to mark this dish (both Small & Large) In Stock"
+                            ? "Click to mark this dish (all options) In Stock"
                             : "Click to mark this dish In Stock"
                         }
                       >
@@ -217,7 +217,10 @@ export function MenuManager() {
                             </span>
                             {hasMultipleSizes && (
                               <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-[9px] font-bold uppercase tracking-wider shrink-0">
-                                Small & Large
+                                {group.variants.map((v) => {
+                                  const match = v.name.match(/\(([^)]+)\)/);
+                                  return match ? match[1] : (v.name.toLowerCase().includes("small") ? "Small" : "Large");
+                                }).join(" & ")}
                               </span>
                             )}
                             {item.tag && (
@@ -255,18 +258,23 @@ export function MenuManager() {
                       )}
                     </td>
 
-                    {/* Price Column: Handles both single and multi-size (Small & Large) */}
+                    {/* Price Column: Handles single and multi-option (Small & Large, Steam & Fried) */}
                     <td className="py-4 px-6">
                       {hasMultipleSizes ? (
                         <div className="flex flex-col gap-1.5 py-0.5">
                           {group.variants.map((v) => {
-                            const isSmall = v.name.toLowerCase().includes("small");
-                            const isLarge = v.name.toLowerCase().includes("large");
-                            const label = isSmall ? "Small" : isLarge ? "Large" : "Portion";
+                            const match = v.name.match(/\(([^)]+)\)/);
+                            const label = match
+                              ? match[1]
+                              : v.name.toLowerCase().includes("small")
+                              ? "Small"
+                              : v.name.toLowerCase().includes("large")
+                              ? "Large"
+                              : "Option";
 
                             return (
                               <div key={v.id} className="flex items-center gap-2">
-                                <span className="text-[11px] font-semibold text-[#78716C] w-10">
+                                <span className="text-[11px] font-semibold text-[#78716C] min-w-10">
                                   {label}:
                                 </span>
                                 {editingPriceId === v.id ? (

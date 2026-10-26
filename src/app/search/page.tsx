@@ -156,10 +156,15 @@ export default function SearchPage() {
     const variants = dishVariantsMap[base];
     if (variants && variants.length > 1) {
       return variants.map((v) => {
-        const isSmall = v.name.toLowerCase().includes("small");
+        const match = v.name.match(/\(([^)]+)\)/);
+        let optionName = match ? match[1].trim() : "";
+        if (!optionName) {
+          const isSmall = v.name.toLowerCase().includes("small");
+          optionName = isSmall ? "Small" : "Large";
+        }
         return {
           id: v.id,
-          name: isSmall ? "Small" : "Large",
+          name: optionName,
           price: v.price,
           item: v,
         };

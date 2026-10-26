@@ -67,8 +67,14 @@ export function ItemCustomizationModal({
   const unitPrice = currentSizeObj?.price || item.price;
   const totalPrice = unitPrice * quantity;
 
-  // Clean title for modal header (strip any "(Small)" or "(Large)" if present)
-  const cleanTitle = item.name.replace(/\s*\((Small|Large)\)/i, "").trim();
+  // Clean title for modal header (strip any "(Small)" or "(Large)" or "(Steam)" or "(Fried)" if present)
+  const cleanTitle = item.name.replace(/\s*\([^)]+\)/i, "").trim();
+
+  // Dynamic heading: if options are sizes (Small/Large) show "Select Size", otherwise "Select Option"
+  const isSizeOnly = sizeOptions.every((opt) =>
+    /^(small|large|half|full|regular)$/i.test(opt.name.trim())
+  );
+  const sectionHeading = isSizeOnly ? "Select Size" : "Select Option";
 
   const handleConfirm = () => {
     if (onAddToCart && item && currentSizeObj) {
@@ -119,12 +125,12 @@ export function ItemCustomizationModal({
           </h2>
         </div>
 
-        {/* Customization Body (ONLY Size section, Extra Veggies and all addons removed) */}
+        {/* Customization Body */}
         <div className="p-4 bg-[#F6F6F9] overflow-y-auto space-y-4">
           <div>
             <div className="mb-2">
               <h3 className="text-base font-bold text-[#1F2937] leading-tight">
-                Select Size
+                {sectionHeading}
               </h3>
               <p className="text-xs text-gray-500 font-medium">Select 1</p>
             </div>

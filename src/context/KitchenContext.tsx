@@ -269,7 +269,14 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
 
       const savedMenu = localStorage.getItem("lebistro_menu");
       if (savedMenu && !savedMenu.includes("unsplash.com")) {
-        setMenuItems(JSON.parse(savedMenu));
+        try {
+          const parsed: MenuItem[] = JSON.parse(savedMenu);
+          const existingIds = new Set(parsed.map((p) => p.id));
+          const missing = INITIAL_MENU_ITEMS.filter((i) => !existingIds.has(i.id));
+          setMenuItems(missing.length > 0 ? [...parsed, ...missing] : parsed);
+        } catch {
+          setMenuItems(INITIAL_MENU_ITEMS);
+        }
       } else if (savedMenu) {
         localStorage.removeItem("lebistro_menu");
       }
@@ -302,7 +309,9 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       // Menu
       const { items: remoteMenu } = await menuService.fetchMenuItems();
       if (isMounted && remoteMenu.length > 0) {
-        setMenuItems(remoteMenu);
+        const existingIds = new Set(remoteMenu.map((p) => p.id));
+        const missing = INITIAL_MENU_ITEMS.filter((i) => !existingIds.has(i.id));
+        setMenuItems(missing.length > 0 ? [...remoteMenu, ...missing] : remoteMenu);
       }
 
       // Coupons - fetch all promotional and default coupons
@@ -1073,12 +1082,12 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       const target = prev.find((item) => item.id === itemId);
       if (!target) return prev;
 
-      const baseName = target.name.replace(/\s*\((Small|Large)\)/i, "").trim();
+      const baseName = target.name.replace(/\s*\([^)]+\)/i, "").trim();
       const updatedState = !target.isAvailable;
 
-      // Find all matching items (both small and large)
+      // Find all matching items (both small/large and steam/fried)
       const matchingItems = prev.filter((item) => {
-        const itemBase = item.name.replace(/\s*\((Small|Large)\)/i, "").trim();
+        const itemBase = item.name.replace(/\s*\([^)]+\)/i, "").trim();
         return item.id === itemId || (itemBase === baseName && item.category === target.category);
       });
 
@@ -1117,15 +1126,15 @@ export function KitchenProvider({ children }: { children: React.ReactNode }) {
       const target = prev.find((item) => item.id === updatedItem.id);
       if (!target) return prev;
 
-      const baseName = target.name.replace(/\s*\((Small|Large)\)/i, "").trim();
-      const isMultiSize = Boolean(target.name.match(/\((Small|Large)\)/i));
+      const baseName = target.name.replace(/\s*\([^)]+\)/i, "").trim();
+      const isMultiSize = Boolean(target.name.match(/\(([^)]+)\)/));
 
       if (isMultiSize) {
-        const cleanUpdatedName = updatedItem.name.replace(/\s*\((Small|Large)\)/i, "").trim();
+        const cleanUpdatedName = updatedItem.name.replace(/\s*\([^)]+\)/i, "").trim();
         const updated = prev.map((item) => {
-          const itemBase = item.name.replace(/\s*\((Small|Large)\)/i, "").trim();
+          const itemBase = item.name.replace(/\s*\([^)]+\)/i, "").trim();
           if (itemBase === baseName && item.category === target.category) {
-            const sizeSuffixMatch = item.name.match(/\((Small|Large)\)/i);
+            const sizeSuffixMatch = item.name.match(/\(([^)]+)\)/);
             const sizeSuffix = sizeSuffixMatch ? ` (${sizeSuffixMatch[1]})` : "";
             const syncedItem: MenuItem = {
               ...item,

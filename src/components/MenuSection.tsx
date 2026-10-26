@@ -52,9 +52,9 @@ export function MenuSection() {
 
   const [customizingItem, setCustomizingItem] = useState<MenuItem | null>(null);
 
-  // Helper to extract clean base name without size suffixes like "(Small)" or "(Large)"
+  // Helper to extract clean base name without size/option suffixes like "(Small)", "(Large)", "(Steam)", "(Fried)"
   const getBaseDishName = (name: string) => {
-    return name.replace(/\s*\((Small|Large|Half|Full|Regular)\)/i, "").trim();
+    return name.replace(/\s*\((Small|Large|Half|Full|Regular|Steam|Fried)\)/i, "").trim();
   };
 
   // Group menu items by base dish name
@@ -95,7 +95,7 @@ export function MenuSection() {
     return result;
   };
 
-  // Only items with genuine Small and Large options will open the size selector modal
+  // Only items with genuine options/sizes will open the customization modal
   const hasSmallAndLarge = (itm: MenuItem) => {
     const base = getBaseDishName(itm.name);
     const variants = dishVariantsMap[base];
@@ -107,11 +107,16 @@ export function MenuSection() {
     const variants = dishVariantsMap[base];
     if (variants && variants.length > 1) {
       return variants.map((v) => {
-        const isSmall = v.name.toLowerCase().includes("small");
+        const match = v.name.match(/\(([^)]+)\)/);
+        let optionName = match ? match[1].trim() : "";
+        if (!optionName) {
+          const isSmall = v.name.toLowerCase().includes("small");
+          optionName = isSmall ? "Small" : "Large";
+        }
         return {
           id: v.id,
-          name: isSmall ? "Small" : "Large",
-          price: v.price, // Exact price from the menu! (e.g. Chilli Potato: Small ₹70, Large ₹100)
+          name: optionName,
+          price: v.price,
           item: v,
         };
       });

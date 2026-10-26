@@ -21,8 +21,10 @@ export function ItemStockConfirmModal({
 
   // If item is currently available, clicking will mark it OUT of stock
   const isMarkingOutOfStock = item.isAvailable;
-  const cleanName = item.name.replace(/\s*\((Small|Large)\)/i, "").trim();
-  const hasMultipleSizes = Boolean(item.name.match(/\((Small|Large)\)/i));
+  const cleanName = item.name.replace(/\s*\([^)]+\)/i, "").trim();
+  const hasMultipleSizes = Boolean(item.name.match(/\(([^)]+)\)/));
+  const isMomos = item.name.toLowerCase().includes("steam") || item.name.toLowerCase().includes("fried");
+  const variantLabel = isMomos ? "Steam & Fried" : "Small & Large";
 
   return (
     <div className="fixed inset-0 z-60 overflow-hidden flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
@@ -75,10 +77,10 @@ export function ItemStockConfirmModal({
           <p className="text-xs text-[#A8A29E] leading-relaxed">
             {isMarkingOutOfStock
               ? `Are you sure you want to mark ${cleanName} as Out of Stock? Customers will not be able to order this dish${
-                  hasMultipleSizes ? " (applies to both Small & Large portions)" : ""
+                  hasMultipleSizes ? ` (applies to both ${variantLabel})` : ""
                 }.`
               : `Are you sure you want to mark ${cleanName} as In Stock? The dish will be restored to active ordering${
-                  hasMultipleSizes ? " (both Small & Large portions)" : ""
+                  hasMultipleSizes ? ` (both ${variantLabel})` : ""
                 }.`}
           </p>
         </div>
@@ -99,7 +101,7 @@ export function ItemStockConfirmModal({
               {hasMultipleSizes ? (
                 <>
                   <span>•</span>
-                  <span className="text-amber-400 font-semibold">Small & Large</span>
+                  <span className="text-amber-400 font-semibold">{variantLabel}</span>
                 </>
               ) : (
                 <>

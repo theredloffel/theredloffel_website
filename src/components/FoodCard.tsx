@@ -6,7 +6,7 @@ import { useKitchen } from "@/context/KitchenContext";
 import { Plus, Minus } from "lucide-react";
 
 export const getBaseDishName = (name: string) => {
-  return name.replace(/\s*\((Small|Large|Half|Full|Regular)\)/i, "").trim();
+  return name.replace(/\s*\((Small|Large|Half|Full|Regular|Steam|Fried)\)/i, "").trim();
 };
 
 interface FoodCardProps {
@@ -19,7 +19,7 @@ export function FoodCard({ item, onCustomize, dishVariantsMap }: FoodCardProps) 
   const { cart, addToCart, removeFromCart } = useKitchen();
 
   const cleanTitle = getBaseDishName(item.name);
-  const cleanDesc = item.description.replace(/\s*\(Portion:\s*(Small|Large)\)/i, "");
+  const cleanDesc = item.description.replace(/\s*\(Portion:\s*(Small|Large|Steam|Fried)\)/i, "");
 
   const variants = dishVariantsMap ? dishVariantsMap[cleanTitle] : null;
   const hasSizes = Boolean(variants && variants.length > 1);
