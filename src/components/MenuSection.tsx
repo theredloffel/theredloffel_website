@@ -6,9 +6,11 @@ import { Category, MenuItem } from "@/types";
 import { Plus, Minus, AlertCircle, Flame, Star, Check } from "lucide-react";
 import { ItemCustomizationModal, CustomSizeOption } from "./ItemCustomizationModal";
 import { FoodCard } from "./FoodCard";
+import { NewlyLaunchedSection } from "./NewlyLaunchedSection";
 
 const MENU_CATEGORIES: Category[] = [
   "All",
+  "Newly Launched",
   "Under ₹99",
   "Burgers",
   "Parathas",
@@ -136,6 +138,18 @@ export function MenuSection() {
       .reduce((sum, ci) => sum + ci.quantity, 0);
   };
 
+  const momoItem = useMemo(() => {
+    return (
+      menuItems.find((i) => i.id === "c9-steam" || i.id === "c9-fried") ||
+      menuItems.find((i) => i.name.toLowerCase().includes("green veg momos"))
+    );
+  }, [menuItems]);
+
+  const momoCartQuantity = useMemo(() => {
+    if (!momoItem) return 0;
+    return getItemQuantityInCart(momoItem);
+  }, [momoItem, cart, dishVariantsMap]);
+
   // Helper to filter items by search and veg flag
   const filterItem = (item: MenuItem) => {
     if (isVegOnly && item.dietary !== "veg") return false;
@@ -235,6 +249,24 @@ export function MenuSection() {
     const isDesktop = window.innerWidth >= 768;
     const headerOffset = isDesktop ? 130 : 110;
 
+    if (category === "Newly Launched") {
+      const el = document.getElementById("newly-launched-showcase");
+      if (el) {
+        const y = el.getBoundingClientRect().top + window.pageYOffset - (isDesktop ? 120 : 100);
+        window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+      } else {
+        const menuElem = document.getElementById("menu");
+        if (menuElem) {
+          const y = menuElem.getBoundingClientRect().top + window.pageYOffset - (isDesktop ? 120 : 100);
+          window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+        }
+      }
+      setTimeout(() => {
+        isClickScrollingRef.current = false;
+      }, 700);
+      return;
+    }
+
     if (category === "Under ₹99" || category === "All") {
       const menuElem = document.getElementById("menu");
       if (menuElem) {
@@ -274,6 +306,28 @@ export function MenuSection() {
 
   return (
     <section id="menu" className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-6 sm:py-8">
+      {/* 0. Newly Launched Spotlight Section (Above EXPLORE OUR MENU) */}
+      {!searchQuery.trim() && (
+        <div id="newly-launched-showcase" className="scroll-mt-32">
+          <NewlyLaunchedSection
+            onCustomize={(item) => setCustomizingItem(item)}
+            momoItem={momoItem}
+            quantityInCart={momoCartQuantity}
+            onRemoveFromCart={() => {
+              if (momoItem) {
+                const inCart = cart.find(
+                  (ci) =>
+                    ci.item.id === "c9-steam" ||
+                    ci.item.id === "c9-fried" ||
+                    ci.item.name.toLowerCase().includes("green veg momos")
+                );
+                if (inCart) removeFromCart(inCart.item.id);
+              }
+            }}
+          />
+        </div>
+      )}
+
       {/* 1. Header: EXPLORE OUR MENU */}
       <div className="text-center mb-3">
         <span className="text-[11px] sm:text-xs font-bold tracking-[0.25em] text-[#78716C] uppercase inline-block">
