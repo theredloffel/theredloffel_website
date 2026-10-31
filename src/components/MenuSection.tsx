@@ -145,10 +145,22 @@ export function MenuSection() {
     );
   }, [menuItems]);
 
+  const springRollItem = useMemo(() => {
+    return (
+      menuItems.find((i) => i.id === "c10") ||
+      menuItems.find((i) => i.name.toLowerCase().includes("spring rolls"))
+    );
+  }, [menuItems]);
+
   const momoCartQuantity = useMemo(() => {
     if (!momoItem) return 0;
     return getItemQuantityInCart(momoItem);
   }, [momoItem, cart, dishVariantsMap]);
+
+  const springRollCartQuantity = useMemo(() => {
+    if (!springRollItem) return 0;
+    return getItemQuantityInCart(springRollItem);
+  }, [springRollItem, cart, dishVariantsMap]);
 
   // Helper to filter items by search and veg flag
   const filterItem = (item: MenuItem) => {
@@ -312,17 +324,17 @@ export function MenuSection() {
           <NewlyLaunchedSection
             onCustomize={(item) => setCustomizingItem(item)}
             momoItem={momoItem}
-            quantityInCart={momoCartQuantity}
-            onRemoveFromCart={() => {
-              if (momoItem) {
-                const inCart = cart.find(
-                  (ci) =>
-                    ci.item.id === "c9-steam" ||
-                    ci.item.id === "c9-fried" ||
-                    ci.item.name.toLowerCase().includes("green veg momos")
-                );
-                if (inCart) removeFromCart(inCart.item.id);
+            springRollItem={springRollItem}
+            momoQuantity={momoCartQuantity}
+            springRollQuantity={springRollCartQuantity}
+            onAddToCart={(item) => {
+              addToCart(item);
+              if (showToast) {
+                showToast(`${item.name} added to cart!`, "success");
               }
+            }}
+            onRemoveFromCart={(itemId) => {
+              removeFromCart(itemId);
             }}
           />
         </div>
