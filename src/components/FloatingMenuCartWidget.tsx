@@ -150,7 +150,12 @@ export function FloatingMenuCartWidget() {
     );
 
     counts["All"] = availableItems.length;
-    counts["Newly Launched"] = availableItems.filter((i) => i.name.toLowerCase().includes("green veg momos")).length;
+    counts["Newly Launched"] = availableItems.filter(
+      (i) =>
+        i.name.toLowerCase().includes("momos") ||
+        i.name.toLowerCase().includes("spring rolls") ||
+        i.tag?.toLowerCase().includes("newly launched")
+    ).length;
     counts["Under ₹99"] = availableItems.filter((i) => i.price <= 99).length;
 
     CATEGORIES_CONFIG.slice(3).forEach(({ category }) => {

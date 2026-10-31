@@ -331,6 +331,19 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
     preparationTime: "14 mins",
     calories: "270 kcal",
   },
+  {
+    id: "c10",
+    name: "Crispy Veg Spring Rolls",
+    category: "Chinese",
+    price: 80,
+    description: "Enjoy our crispy, golden spring rolls, filled with a flavourful blend of fresh vegetables and aromatic seasonings. Perfectly fried for a crunchy bite and served with sweet chilli dipping sauce. A delicious snack for any time of the day!",
+    dietary: "veg",
+    isAvailable: true,
+    image: "/foodpic/Chinese_Rolls_Menu_Photos/Crispy_Veg_Spring_Rolls.png",
+    tag: "Newly Launched",
+    preparationTime: "10 mins",
+    calories: "240 kcal",
+  },
 
   // 4. FRIED RICE
   {
