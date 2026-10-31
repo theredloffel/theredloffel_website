@@ -22,7 +22,7 @@ const CATEGORIES_DATA: CategoryItem[] = [
   {
     id: "Newly Launched",
     title: "Newly Launched",
-    subtitle: "Green Veg Momos",
+    subtitle: "Momos & Rolls",
     image: "/foodpic/momos/greenmomos.png",
   },
   {
