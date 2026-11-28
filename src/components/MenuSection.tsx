@@ -318,7 +318,19 @@ export function MenuSection() {
 
   return (
     <section id="menu" className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-6 sm:py-8">
-      {/* 0. Newly Launched Spotlight Section (Above EXPLORE OUR MENU) */}
+      {/* Main Banner */}
+      {!searchQuery.trim() && (
+        <div className="mb-6 sm:mb-8 rounded-2xl sm:rounded-3xl overflow-hidden">
+          <img
+            src="/banner/mainbanner.png"
+            alt="Main Banner"
+            className="w-full h-auto object-cover rounded-2xl sm:rounded-3xl"
+          />
+        </div>
+      )}
+
+      {/* 0. Newly Launched Spotlight Section (Above EXPLORE OUR MENU) - Temporarily commented out for future use */}
+      {/*
       {!searchQuery.trim() && (
         <div id="newly-launched-showcase" className="scroll-mt-32">
           <NewlyLaunchedSection
@@ -339,6 +351,7 @@ export function MenuSection() {
           />
         </div>
       )}
+      */}
 
       {/* 1. Header: EXPLORE OUR MENU */}
       <div className="text-center mb-3">
@@ -355,22 +368,20 @@ export function MenuSection() {
 
       {/* 2. Category Pill Bar: FIXED just below Search Bar on scroll */}
       <div
-        className={`${
-          isPillsFixed
+        className={`${isPillsFixed
             ? "fixed top-[52px] md:top-[72px] left-0 right-0 z-40 bg-[#FAF8F5]/98 backdrop-blur-md border-b border-[#E7E0D8] px-3.5 sm:px-6 lg:px-8 py-2.5 shadow-xs transition-all"
             : "relative py-3 bg-[#FAF8F5] border-b border-[#E7E0D8] mb-6 -mx-3.5 sm:mx-0 px-3.5 sm:px-0"
-        }`}
+          }`}
       >
         <div className="max-w-7xl mx-auto flex items-center gap-2.5 overflow-x-auto pb-1 scrollbar-none">
           {/* Veg Only Filter Pill */}
           <button
             type="button"
             onClick={() => setIsVegOnly((prev) => !prev)}
-            className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs sm:text-sm font-bold border transition-all ${
-              isVegOnly
+            className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs sm:text-sm font-bold border transition-all ${isVegOnly
                 ? "bg-emerald-100 text-emerald-900 border-emerald-400 ring-1 ring-emerald-500 shadow-xs"
                 : "bg-white text-[#1C1917] border-[#E7E0D8] hover:border-[#1C1917]"
-            }`}
+              }`}
           >
             <div className="w-3.5 h-3.5 rounded-xs border border-emerald-600 flex items-center justify-center bg-white shrink-0">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-600"></div>
@@ -392,11 +403,10 @@ export function MenuSection() {
                 }}
                 type="button"
                 onClick={() => scrollToCategory(category)}
-                className={`shrink-0 px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${
-                  isSelected
+                className={`shrink-0 px-4 py-2 rounded-full text-xs sm:text-sm font-bold whitespace-nowrap transition-all ${isSelected
                     ? "bg-[#1C1917] text-[#FAF8F5] shadow-xs scale-102"
                     : "bg-white text-[#57534E] border border-[#E7E0D8] hover:border-[#C2410C] hover:text-[#1C1917]"
-                }`}
+                  }`}
               >
                 {category}
               </button>
